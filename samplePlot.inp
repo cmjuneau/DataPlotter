@@ -1,0 +1,22 @@
+comment WHAT INFORMATION DOES THIS GRAPH PROVIDE
+particle XX
+plot DD/EI/AI
+angle XXX (if plot = DD)
+data DATAFile
+c scaleX XXX (For scaling exp. data)
+c scaleY XXX (For scaling exp. data)
+read SIMULATIONFile
+c scaleSimX XXX (For scaling sim. data)
+c scaleSimY XXX (For scaling sim. data)
+annotate $^{?}TRG$ (XXX GeV/A $^{?}PRJ$, X)
+c annotateX XXX
+c annotateY XXX
+c xMax XXX
+c yMin XXX
+c yMax XXX
+c legendX XXX (For moving legend in x)
+c legendY XXX (For moving legend in y)
+display none
+save SAVENAME.png
+dpi 1200
+end plot
