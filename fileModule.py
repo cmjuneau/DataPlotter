@@ -168,7 +168,7 @@ def readFile( fileName, printData = False ):
         __filePrint.message = "Reading data from \"%s\"." % (fileName)
         __filePrint.print(2, 3)
         for i in range(0, numLines, 1):
-            lineData = thisFile.readline().strip().lower()
+            lineData = thisFile.readline().strip()
             fileData.append( lineData )
 
             # Print line if desired:

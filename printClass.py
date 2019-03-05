@@ -36,7 +36,8 @@ class Print:
         __wrnPrnt = 1
         __cmtPrnt = 2
         __blkPrint = 3
-        __defaultMessageTypes = ("(E)     Error:", "(W)   Warning: ", "      Comment: ", "")
+        __defaultMessageFlags = (__errPrnt, __wrnPrnt, __cmtPrnt, __blkPrint)
+        __defaultMessageTypes = ("(E)     Error: ", "(W)   Warning: ", "      Comment: ", "")
         __defaultVerbose = 2
         __defaultVerboseLimit = 2
 
@@ -62,9 +63,10 @@ class Print:
 
         # Determine message type (NOTE: for negative msgType print to stderr)
         prntType = abs(msgType)
-        if not ( (prntType == __errPrnt) or (prntType == __wrnPrnt) or (prntType == __cmtPrnt) or (prntType == __blkPrint)):
-            prntType == __errPrnt
-
+        if ( prntType not in __defaultMessageFlags ):
+            print("Indicated message type of \"%d\" is out of range. Flagging as error message." % (prntType) )
+            print("   Note: Valid message flags include: ", __defaultMessageFlags)
+            prntType = __errPrnt
 
         # Check if verbosity flag is high enough:
         if ( verbFlag <= verbLimit or prntType == __errPrnt ):

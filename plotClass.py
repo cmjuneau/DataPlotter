@@ -35,81 +35,91 @@ __version__ = "1.0.0"
 
 # Plot defaults:
 # Use LaTeX as text editor:
+_defaultFontSize = 11
+__figureFont = _defaultFontSize
 plotlib.rcParams['text.usetex'] = True
 plotlib.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
-# (font defaults)
-defaultFont = 14
-figureFont = 11
-detaultAnnotationFont = 11
-plotlib.rcParams.update({'font.size': figureFont})
+plotlib.rcParams.update({'font.size': __figureFont})
 plt.rc('font', **{'family': 'serif'})   # Which font to use
-plt.rcParams['axes.labelweight'] = 'bold'
-# Figure size:
-figureHeight = 3.5
-figureWidth  = 6.811
-# For see-through images:
-opacity = 0.6
-# For when multiple types exist:
-typeExpScaling = 2
-surroundMainAnnotation = True
 
 
-# Default scalings:
-dynamicXScaling = 0.05   # Scale up/down for dynamic limits
-dynamicYScaling = 0.05
-useOwnHistPlot = True   # Uses a line for histogram plots
+# Contains the figure and axis objects to use when plotting
+class _BaseFigure:
+    """The \"_BaseFigure\" object contains the figure and axis object to be used
+    when creating a plot. The object is intended to be inhereted by the
+    _PlotLabeling, _AxisLimits, and Plot objects.
 
+    No other clients should use this class when plotting
+    \t(although they may if other features are desired).
+    ----------------------------------------------------------------------------
 
+    """
+    __defaultWidth  = 6.811
+    __defaultHeigth = 3.5
+    __write = Print()
 
-
-# For linestyle, color:
-lineColors = [ 'blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
-'gray', 'olive', 'cyan']
-numColors = len( lineColors )
-# Line styles:
-lineStyles = ['--','-',':','-.']
-numLineStyles = len(lineStyles)
-
-
-class BaseFigure:
-    """Contains the axis and figure for a plot"""
-    __figure, __axis = plt.subplots()
-
-    def __init__(self, newFigWidth = figureWidth, newFigHeigth = figureHeight):
+    def __init__(self, newFigWidth = __defaultWidth, newFigHeigth = __defaultHeigth):
         """Constructor for a figure object"""
+        if ( newFigWidth <= 0 ):
+            newFigWidth = __defaultWidth
+        if ( newFigHeigth <= 0 ):
+            newFigHeigth = __defaultHeigth
         self.__figure, self.__axis = plt.subplots( figsize=(newFigWidth, newFigHeigth) )
 
         return
 
+    def __del__(self):
+        """Destructor for the object"""
+        del self.__axis
+        del self.__figure
 
 
-# Controls the Plot classes axis info:
-class PlotLabeling(BaseFigure):
-    """Controls axis labeling for a plot"""
-    # General class control:
-    __write = Print()
-    # Fonts:
-    __axisFont       = defaultFont
-    __annotationFont = defaultFont
-    __titleFont      = defaultFont + 2
-    # Axis labeling (title, X/Y labels, fonts):
-    __plotTitle = "Plot Title"
-    __xLabel   = "X [Units]"
-    __yLabel   = "Y [Units]"
-    # In-plot annotations:
-    __useBoldFont = True
-    __boxAnnotation = True   # Includes a box around the annotation
-    # (main annotation)
-    __mainAnnotation = None
-    __mainAnnotateX  = 0.0
-    __mainAnnotateY  = 0.0
-    # (secondary annotations)
-    __otherAnnotations = []
-    __otherAnnotateX   = []
-    __otherAnnotateY   = []
+# Controls the Plot classes axis info (labels, titles, annotations)
+class _PlotLabeling(_BaseFigure):
+    """The \"_PlotLabeling\" object is intended to control the axis labels
+    (x label, y label, plot title) and all annotations.
+
+    Two types of annotations exist in this object: a "main" and "others".
+    Only one main annotation may exist, and as many as desired "other"
+    annotations may exist. Annotations default to black; only "other" annotations
+    may have their text color modified from the default.
+    -Other annotations are included here to allow users to easily and quickly
+    \tplace annotations for specifc sets of lines when printing multiple plots on
+    \ta single plot, similar to a legend (however more customizable and movable).
+    -Annotations are allowed to be draggable, and they may be clipped by the axes
+    \tlimits, preventing them from being seen.
+
+    The object utilizes LaTeX font (the amsmath package is loaded).
+    \tClients/users have the option to turn on BOLD LaTeX font, where all labels
+    \tand annotations are made bold.
+
+    All annotations utilize the XY limits of the axis for placement.
+
+    Accessible Member Functions ( Purpose ):
+    -setXLabel            ( Sets the X-axis label that will be utilized )
+    -setYLabel            ( Sets the Y-axis label that will be utilized )
+    -setPlotTitle         ( Sets the plot title that will be utilized )
+    -setMainAnnotation    ( Modifies the main annotation and position )
+    -addOtherAnnotation   ( Adds an annotation of "other" type )
+    -labelPlot            ( Applies all axis labels [x, y, title] and annotations )
+    ----------------------------------------------------------------------------
+
+    """
+    # Default annotation locations (note: defaults don't conflict with axes scales):
+    __defaultXAnnotation = float(1.0E-4)
+    __defaultYAnnotation = float(1.0E-4)
+    __defaultAnnotationColor = "black"
+    # Fonts (used for each class)
+    __axisFont       = _defaultFontSize
+    __annotationFont = _defaultFontSize
+    __titleFont      = _defaultFontSize + 2
 
     def __init__(self, newPlotTitle = None, newXLabel = None, newYLabel = None, useBoldFont = True, newPrint = Print() ):
         """Constructor for plot labeling object"""
+
+        # Construct parent class(es):
+        super(_PlotLabeling, self).__init__( )
+
         # General information:
         self.__write = newPrint
 
@@ -125,61 +135,95 @@ class PlotLabeling(BaseFigure):
             self.__yLabel = newYLabel
         self.__useBoldFont = useBoldFont
 
+        return
+
+    def __del__(self):
+        """Class destructor"""
+        self.__resetMembers()
+        return
+
     def __resetMembers(self):
         """Resets all class member variables"""
 
         # Axis labeling (title, X/Y labels, fonts):
-        self.__axisFont  = defaultFont
-        self.__titleFont = defaultFont + 2
-        self.__plotTitle = "Plot Title"
         self.__xLabel    = "X [Units]"
         self.__yLabel    = "Y [Units]"
+        self.__plotTitle = "Plot Title"
         # In-plot annotations:
-        self.__useBoldFont = True
-        self.__boxAnnotation = True   # Includes a box around the annotation
+        self.__useBoldFont   = True   # Makes all text bold (axis labels, plot title, annotations)
         # (main annotation)
+        self.__boxMainAnnotation = True   # Includes a box around the annotation
         self.__mainAnnotation = None
-        self.__mainAnnotateX  = 0.0
-        self.__mainAnnotateY  = 0.0
+        self.__mainAnnotateX  = self.__defaultXAnnotation
+        self.__mainAnnotateY  = self.__defaultXAnnotation
+        self.__mainAnnotateColor = self.__defaultAnnotationColor
         # (secondary annotations)
-        self.__otherAnnotations = []
-        self.__otherAnnotateX   = []
-        self.__otherAnnotateY   = []
+        self.__boxOtherAnnotation  = False
+        self.__otherAnnotations    = []
+        self.__otherAnnotateX      = []
+        self.__otherAnnotateY      = []
+        self.__otherAnnotateColor  = []
+        self.__numOtherAnnotations = 0
+
+        return
 
     def __applyXLabel(self):
         """Sets the X-axis label"""
-        super().__axis.set_xlabel( self.__xLabel, fontsize=self.__axisFont )
+        self._BaseFigure__axis.set_xlabel( self.__xLabel, fontsize=self.__axisFont )
         return
 
     def __applyYLabel(self):
         """Sets the Y-axis label"""
-        super().__axis.set_ylabel( self.__yLabel, fontsize=self.__axisFont )
+        self._BaseFigure__axis.set_ylabel( self.__yLabel, fontsize=self.__axisFont )
         return
 
     def __applyPlotTitle(self):
         """Titles the plot title"""
-        super().__axis.set_title( self.__plotName, fontsize=self.__titleFont )
+        self._BaseFigure__axis.set_title( self.__plotTitle, fontsize=self.__titleFont )
         return
 
     def __applyMainAnnotation(self):
-        """Prints the annotation"""
-        # If annotation exists, create one (apply box if desired):
-        if ( not self.__mainANnotation == None ):
-            if ( self.__boxAnnotation ):
-                plt.annotate(self.__mainAnnotation,
+        """Prints the main annotation if it exists"""
+        if ( not self.__mainAnnotation == None ):
+            if ( self.__boxMainAnnotation ):
+                thisAnnotation = self._BaseFigure__axis.annotate(self.__mainAnnotation,
                 xy=(self.__mainAnnotateX, self.__mainAnnotateY),
                 xycoords="data", horizontalalignment="left", verticalalignment="bottom",
-                fontsize=self.__annotationFont, clip_on=True,
+                fontsize=self.__annotationFont, clip_on=True, color=self.__mainAnnotateColor,
                 bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.75) )
             else:
-                plt.annotate(self.__mainAnnotation,
+                thisAnnotation = self._BaseFigure__axis.annotate(self.__mainAnnotation,
                 xy=(self.__mainAnnotateX, self.__mainAnnotateY),
                 xycoords="data", horizontalalignment="left", verticalalignment="bottom",
-                fontsize=self.__annotationFont, clip_on=True)
+                fontsize=self.__annotationFont, clip_on=True, color=self.__mainAnnotateColor)
+
+        thisAnnotation.draggable()
+        return
+
+    def __applyOtherAnnotations(self):
+        """Prints all other annotations if they exist"""
+        if( self.__numOtherAnnotations > 0 ):
+            if ( self.__boxOtherAnnotation ):
+                for i in range(0, self.__numAnnotations, 1):
+                    thisAnnotation = self._BaseFigure__axis.annotate(self.__otherAnnotations[i],
+                    xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
+                    xycoords="data", horizontalalignment="left", verticalalignment="bottom",
+                    fontsize=self.__annotationFont, clip_on=True, color=self.__otherAnnotateColor[i],
+                    bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.75) )
+                    thisAnnotation.draggable()
+            else:
+                for i in range(0, self.__numAnnotations, 1):
+                    thisAnnotation = self._BaseFigure__axis.annotate(self.__otherAnnotations[i],
+                    xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
+                    xycoords="data", horizontalalignment="left", verticalalignment="bottom",
+                    fontsize=self.__annotationFont, clip_on=True, color=self.__otherAnnotateColor[i])
+                    thisAnnotation.draggable()
+
+        return
 
     def setXLabel(self, newXLabel = None):
         """Sets a new X Label"""
-        if ( newXLabel == None ):
+        if ( newXLabel is None ):
             self.__write.message = "Must pass a x-axis string to toggle the label."
             self.__write.print(1, 2)
         else:
@@ -200,7 +244,7 @@ class PlotLabeling(BaseFigure):
 
     def setYLabel(self, newYLabel = None):
         """Sets a new Y Label"""
-        if ( newYLabel == None ):
+        if ( newYLabel is None ):
             self.__write.message = "Must pass a y-axis string to toggle the label."
             self.__write.print(1, 2)
         else:
@@ -221,7 +265,7 @@ class PlotLabeling(BaseFigure):
 
     def setPlotTitle(self, newPlotTitle = None):
         """Sets a new plot title to use"""
-        if ( newPlotTitle == None ):
+        if ( newPlotTitle is None ):
             self.__write.message = "Must pass a plot title string to toggle the plot's title."
             self.__write.print(1, 2)
         else:
@@ -240,60 +284,120 @@ class PlotLabeling(BaseFigure):
 
         return
 
-
     def setMainAnnotation(self, newAnnotation=None, xVal = None, yVal = None):
         """Sets the main annotation for the plot"""
-        if ( newAnnotation == None ):
+        if ( newAnnotation is None ):
             self.__write.message = "No primary annotation text given. Cannot apply annotation."
             self.__write.print(1, 2)
             return
 
-        return
-
-    def annotateXY(self, annotation=None, newX=None, newY=None, fontSize = None):
-        """Sets the X/Y of the annotation"""
-        if ( not isinstance(annotation, str) ):
-            self.__write.message = "First parameter to annotateXY function must of type 'str'. Converting to str type..."
-            self.__write.print(1, 2)
+        # Ensure arguments are valid:
+        if ( not isinstance(newAnnotation, str) ):
             try:
-                annotation = str( annotation )
+                newAnnotation = str(newAnnotation)
             except:
-                self.__write.message = "   Failed to convert annotation to text. No annotation will be printed."
+                self.__write.message = "Could not create a primary annotation from given argument. The annotation will not be printed."
                 self.__write.print(1, 2)
                 return
-        self.__annotation = annotation
-        if ( not newX == None ):
-            try:
-                newX = float(newX)
-            except:
-                newX = (1 + dynamicXScaling) * self.__xMin
-            self.__annotateX = newX
+
+        if ( xVal is not None ):
+            if ( isinstance(xVal, (int, float)) ):
+                xVal = float(xVal)
+            else:
+                # Attempt to create a float from the argument:
+                try:
+                    xVal = float(xVal)
+                except:
+                    xVal = self.__defaultXAnnotation
+                    self.__write.message = "Could not determine a x-value for the primary annotation. Using value of %.2f." % (xVal)
+                    self.__write.print(1, 2)
         else:
-            self.__annotateX = (1 + dynamicXScaling) * self.__xMin
-        if ( not newY == None ):
-            try:
-                newY = float(newY)
-            except:
-                newY = (1 + dynamicYScaling) * self.__yMin
-            self.__annotateY = newY
+            xVal = self.__defaultXAnnotation
+
+        if ( yVal is not None ):
+            if ( isinstance(yVal, (int, float)) ):
+                yVal = float(yVal)
+            else:
+                # Attempt to create a float from the argument:
+                try:
+                    yVal = float(yVal)
+                except:
+                    yVal = self.__defaultYAnnotation
+                    self.__write.message = "Could not determine a y-value for the primary annotation. Using value of %.2f." % (yVal)
+                    self.__write.print(1, 2)
         else:
-            self.__annotateY = (1 + dynamicYScaling) * self.__yMin
-        if ( fontSize == None ):
-            self.__annotationFont = detaultAnnotationFont
-        else:
+            yVal = self.__defaultYAnnotation
+
+        # Set annotation variables:
+        self.__mainAnnotation = newAnnotation
+        self.__mainAnnotateX  = xVal
+        self.__mainAnnotateY  = yVal
+
+        # Apply bold if desired:
+        if ( self.__useBoldFont ):
+            self.__mainAnnotation = "{\\bf " + self.__mainAnnotation + "}"
+
+        return
+
+    def addOtherAnnotation(self, newAnnotation=None, xVal = None, yVal = None, newColor = None):
+        """Adds a secondary annotation to the plot"""
+        if ( newAnnotation is None ):
+            self.__write.message = "No secondary annotation text given. Cannot apply annotation."
+            self.__write.print(1, 2)
+            return
+
+        # Ensure arguments are valid:
+        if ( not isinstance(newAnnotation, str) ):
             try:
-                fonSize = int(fontSize)
+                newAnnotation = str(newAnnotation)
             except:
-                fontSize = detaultAnnotationFont
-            self.__annotationFont = fontSize
+                self.__write.message = "Could not create a secondary annotation from given argument. The annotation will not be printed."
+                self.__write.print(1, 2)
+                return
 
-        if ( self.__boldText ):
-            self.__annotation = "{\\bf " + self.__annotation + "}"
+        if ( xVal is not None ):
+            if ( isinstance(xVal, (int, float)) ):
+                xVal = float(xVal)
+            else:
+                # Attempt to create a float from the argument:
+                try:
+                    xVal = float(xVal)
+                except:
+                    xVal = self.__defaultXAnnotation
+                    self.__write.message = "Could not determine a x-value for the secondary annotation. Using value of %.2f." % (xVal)
+                    self.__write.print(1, 2)
+        else:
+            xVal = self.__defaultXAnnotation
 
+        if ( yVal is not None ):
+            if ( isinstance(yVal, (int, float)) ):
+                yVal = float(yVal)
+            else:
+                # Attempt to create a float from the argument:
+                try:
+                    yVal = float(yVal)
+                except:
+                    yVal = self.__defaultYAnnotation
+                    self.__write.message = "Could not determine a y-value for the secondary annotation. Using value of %.2f." % (yVal)
+                    self.__write.print(1, 2)
+        else:
+            yVal = self.__defaultYAnnotation
 
-        self.printAnnotation()
+        if ( newColor is None ):
+            newColor = self.__defaultAnnotationColor
 
+        # Apply bold if desired:
+        if ( self.__useBoldFont ):
+            newAnnotation = "{\\bf " + newAnnotation + "}"
 
+        # Set annotation variables:
+        self.__otherAnnotations.append( newAnnotation )
+        self.__otherAnnotateX.append( xVal )
+        self.__otherAnnotateY.append( yVal )
+        self.__otherAnnotateColora.append( newColor )
+        self.__numOtherAnnotations += 1
+
+        return
 
     def labelPlot(self):
         """Applies the X/Y axis labels, plot title, and all annotations"""
@@ -303,324 +407,628 @@ class PlotLabeling(BaseFigure):
         self.__applyPlotTitle()
         # Annotations:
         self.__applyMainAnnotation()
+        self.__applyOtherAnnotations()
+
+        return
+
+
+# Controls the Plot class's axis limits and scale
+class _AxisLimits(_BaseFigure):
+    """The \"_AxisLimits\" object is used to control the X/Y limits on the axis
+    and the scales applied (linear, log, or symlog allowed).
+
+    This object defaults to use dynamic axes, meaning it will auto-scale its
+    \taxis based on the value that are plotted, should the user/client update the
+    \tdynamicX/Y values.
+
+    Accessible Member Functions ( Purpose ):
+    -setXScale         ( Sets scale of the X-axis, being linear, log, or symlog [logit not allowed] )
+    -setYScale         ( Sets scale of the Y-axis, being linear, log, or symlog [logit not allowed] )
+    -setXLims          ( Allows user to specify X-axis bounds [low, high]; dynamic X-axis is turned off )
+    -setYLims          ( Allows user to specify Y-axis bounds [low, high]; dynamic Y-axis is turned off )
+    -updateDynamicX    ( Given a list of X-values, determine the lowest and largest valid values [different by scale type] )
+    -updateDynamicY    ( Given a list of X-values, determine the lowest and largest valid values [different by scale type] )
+    -applyAxisLimits   ( Applies the X/Y scale, X/Y axis range [based on dynamicX/Y or user specified], and the grid )
+    ----------------------------------------------------------------------------
+
+    """
+    __infinity = float("inf")
+    __defaultUpperLim = float(100.00)
+    # For X/Y scales and the associated limits allowed:
+    __validScales = ("linear", "log", "symlog")
+    __lowestLinScaleValueAllowed = float(0.00)
+    __lowestLogScaleValueAllowed = float(1.0E-20)
+    # For dynamicall scaling X/Y axes
+    __dynamicXScalingFrac = 0.05
+    __dynamicYScalingFrac = 0.05
+
+    def __init__(self, newDynamicX = True, newDynamicY = True, newPrint = Print()):
+        """Constructor for the axis limits class"""
+
+        # Construct parent class(es):
+        super(_AxisLimits, self).__init__()
+
+        # Set main values and defaults:
+        self.__write = newPrint
+        self.__resetMembers()
+
+        # Apply constructor specific values:
+        if ( isinstance(newDynamicX, bool) ):
+            self.__dynamicX = newDynamicX
+        else:
+            self.__write.message = "A boolean type must be passed in to toggle dynamic X-axis. Defaulting to %b." % (self.__dynamicX)
+            self.__write.print(1, 2)
+        if ( isinstance(newDynamicY, bool) ):
+            self.__dynamicY = newDynamicY
+        else:
+            self.__write.message = "A boolean type must be passed in to toggle dynamic Y-axis. Defaulting to %b." % (self.__dynamicY)
+            self.__write.print(1, 2)
+
+        return
+
+    def __del__(self):
+        """Class destructor; this function resets all values in the class"""
+        self.__resetMembers()
+
+        return
+
+    def __resetMembers(self):
+        """Resets all class members to their original value"""
+        # For X/Y scale:
+        self.__xScale = "linear"
+        self.__yScale = "log"
+
+        # For dynamic axis:
+        # (X)
+        self.__dynamicX = True
+        self.__minDynamicX = self.__infinity
+        self.__maxDynamicX = -self.__infinity
+        # (Y)
+        self.__dynamicY = True
+        self.__minDynamicY = self.__infinity
+        self.__maxDynamicY = -self.__infinity
+
+        # For tradiational limits:
+        self.__minX = self.__lowestLinScaleValueAllowed
+        self.__maxX = self.__defaultUpperLim
+        self.__minY = self.__lowestLinScaleValueAllowed
+        self.__maxY = self.__defaultUpperLim
+
+        return
+
+    def __validateLimits(self, lowVal, highVal, axisScale):
+        """Ensures that the lower limit is smaller than the larger limit"""
+
+        # Ensure valid axis label is given:
+        axisScale = axisScale
+
+        # Validate lower limit (0 <= Val < INF)
+        if ( not lowVal < float("inf") ):
+            self.__write.print(3, 2)
+            self.__write.message = "Infinite lower limit (%.4E) is invalid." % (lowVal)
+            self.__write.print(1, 2)
+            if ( axisScale is self.__validScales[0] ):
+                lowVal = self.__lowestLinScaleValueAllowed
+            else:
+                lowVal = self.__lowestLogScaleValueAllowed
+            self.__write.message = "   Using lower limit of %.4E instead." % (lowVal)
+            self.__write.print(1, 2)
+
+        # Obtain a lowest value allowed (protects for log-type axis)
+        if ( axisScale == self.__validScales[0] ):
+            lowestValAllowed = self.__lowestLinScaleValueAllowed
+        elif ( (axisScale == self.__validScales[1]) or (axisScale == self.__validScales[2]) ):
+            lowestValAllowed = max(lowVal, self.__lowestLogScaleValueAllowed)
+        else:
+            self.__write.print(3, 2)
+            self.__write.message = "Invalid axis scale (\"%s\") was detected for validating limits. Assuming log scale..." % (axisScale)
+            self.__write.print(1, 2)
+            lowestValAllowed = max(lowVal, self.__lowestLogScaleValueAllowed)
+
+        # Validate lower limit (0 <= Val < INF)
+        if ( lowVal < lowestValAllowed ):
+            self.__write.print(3, 2)
+            self.__write.message = "Lower limit of %.4E is invalid for the given scale (\"%s\")." % (lowVal, axisScale)
+            self.__write.print(1, 2)
+            lowVal = lowestValAllowed
+            self.__write.message = "   Using limit of %.4E instead." % (lowVal)
+            self.__write.print(1, 2)
+
+        # Valid largest value:
+        if ( highVal <= lowVal ):
+            self.__write.print(3, 2)
+            self.__write.message = "Upper limit of %.3E is too small (low limit is %.3E)." % (highVal, lowVal)
+            self.__write.print(1, 2)
+            if ( lowVal > lowestValAllowed ):
+                highVal = 1.10 * lowVal
+            else:
+                highVal = self.__defaultUpperLim
+            self.__write.message = "   Using upper limit of %.3E." % (highVal)
+            self.__write.print(1, 2)
+
+        return lowVal, highVal
+
+    def __applyGrid(self, showGrid=True, whichAxis='both', gridColor='0.9', gridStyle=':'):
+        """Sets the grid on the plot"""
+        self._BaseFigure__axis.minorticks_on()
+        self._BaseFigure__axis.grid(b=showGrid, which=whichAxis, color=gridColor, linestyle=gridStyle, alpha=0.9)
+
+        return
+
+    def __applyScales(self):
+        """Applies the scale for the X/Y axis"""
+        __minorXTicksLog = (2, 3, 4, 5, 6, 7, 8, 9)
+        __minorYTicksLog = (2, 3, 4, 5, 6, 7, 8, 9)
+
+        # Apply X scale:
+        if ( self.__xScale is self.__validScales[0] ):
+            self._BaseFigure__axis.set_xscale(self.__xScale)
+        elif ( self.__xScale is self.__validScales[1] ):
+            self._BaseFigure__axis.set_xscale(self.__xScale, nonposx='clip', subsx=__minorXTicksLog)
+        elif ( self.__xScale is self.__validScales[2] ):
+            self._BaseFigure__axis.set_xscale(self.__xScale, subsx=__minorXTicksLog)
+
+        # Apply y scale:
+        if ( self.__yScale is self.__validScales[0] ):
+            self._BaseFigure__axis.set_yscale(self.__yScale)
+        elif ( self.__yScale is self.__validScales[1] ):
+            self._BaseFigure__axis.set_yscale(self.__yScale, nonposy='clip', subsy=__minorYTicksLog)
+        elif ( self.__yScale is self.__validScales[2] ):
+            self._BaseFigure__axis.set_yscale(self.__yScale, subsy=__minorYTicksLog)
+
+        return
+
+    def __applyXLimits(self):
+        """Applies the X-limits to the axis."""
+        # Set default values:
+        xMin = self.__lowestLinScaleValueAllowed
+        xMax = self.__defaultUpperLim
+
+        # Obtain X min/max values:
+        if ( self.__dynamicX ):
+            xMin = (1 - self.__dynamicXScalingFrac) * self.__minDynamicX
+            xMax = (1 + self.__dynamicXScalingFrac) * self.__maxDynamicX
+        else:
+            xMin = self.__xMin
+            xMax = self.__xMax
+
+        xMin, xMax = self.__validateLimits(xMin, xMax, self.__xScale)
+
+        # Apply limits:
+        self._BaseFigure__axis.set_xlim(xMin, xMax)
+
+        return
+
+    def __applyYLimits(self):
+        """Applies the Y-limits to the axis."""
+        # Set default values:
+        yMin = self.__lowestLinScaleValueAllowed
+        yMax = self.__defaultUpperLim
+
+        # Obtain X min/max values:
+        if ( self.__dynamicY ):
+            yMin = (1 - self.__dynamicYScalingFrac) * self.__minDynamicY
+            yMax = (1 + self.__dynamicYScalingFrac) * self.__maxDynamicY
+        else:
+            yMin = self.__yMin
+            yMax = self.__yMax
+
+        yMin, yMax = self.__validateLimits(yMin, yMax, self.__yScale)
+
+        # Apply limits:
+        self._BaseFigure__axis.set_ylim(yMin, yMax)
+
+        return
+
+    def setXScale(self, newScale = None):
+        """Sets the X scale"""
+
+        if ( newScale is not None ):
+            if ( not isinstance(newScale, str) ):
+                # Convert to string if possible:
+                try:
+                    newScale = str(newScale)
+                except:
+                    newScale = self.__xScale
+                    self.__write.message = "Could not convert desired x scale to text for usage. Defaulting to \"%s\"." % (newScale)
+                    self.__write.print(1, 2)
+
+            # Ensure "newScale" is a valid assignment:
+            if ( newScale not in self.__validScales ):
+                self.__write.message = "Invalid X scale text passed in (\"%s\"). Defaulting to \"%s\"." % (newScale, self.__xScale)
+                self.__write.print(1, 2)
+                newScale = self.__xScale
+
+        else:
+            newScale = self.__xScale
+            self.__write.message = "No X scale text was passed in. Defaulting to \"%s\"." % (newScale)
+            self.__write.print(1, 2)
+
+        self.__xScale = newScale
+        return
+
+    def setYScale(self, newScale = None):
+        """Sets the Y scale"""
+
+        if ( newScale is not None ):
+            if ( not isinstance(newScale, str) ):
+                # Convert to string if possible:
+                try:
+                    newScale = str(newScale)
+                except:
+                    newScale = self.__yScale
+                    self.__write.message = "Could not convert desired y scale to text for usage. Defaulting to \"%s\"." % (newScale)
+                    self.__write.print(1, 2)
+
+            # Ensure "newScale" is a valid assignment:
+            if ( newScale not in self.__validScales ):
+                self.__write.message = "Invalid Y scale text passed in (\"%s\"). Defaulting to \"%s\"." % (newScale, self.__yScale)
+                self.__write.print(1, 2)
+                newScale = self.__yScale
+
+        else:
+            newScale = self.__yScale
+            self.__write.message = "No Y scale text was passed in. Defaulting to \"%s\"." % (newScale)
+            self.__write.print(1, 2)
+
+        self.__yScale = newScale
+        return
+
+    def setXLims(self, newXMin = None, newXMax = None):
+        """Sets the X limits for the program"""
+
+        # Set default X min/max:
+        if ( newXMin is None ):
+            if ( self.__dynamicX ):
+                newXMin = self.__minDynamicX
+            else:
+                newXMin = self.__xMin
+        if ( newXMax is None ):
+            if ( self.__dynamicX ):
+                newXMax = self.__maxDynamicX
+            else:
+                newXMax = self.__xMax
+
+        # Validate and set limits:
+        self.__xMin, self.__xMax = self.__validateLimits(newXMin, newXMax, self.__xScale)
+
+        # Print to user:
+        self.__write.message = "The plot's X-axis will have range [%.4E, %.4E]." % (self.__xMin, self.__xMax)
+        self.__write.print(2, 3)
+
+        # Turn off dynamic X scaling:
+        if ( self.__dynamicX ):
+            self.__dynamicX = False
+            self.__write.message = "   Dynamic X limits will not be used."
+            self.__write.print(2, 3)
+
+        return
+
+    def setYLims(self, newYMin = None, newYMax = None):
+        """Sets the Y limits for the program"""
+
+        # Set default X min/max:
+        if ( newYMin is None ):
+            if ( self.__dynamicY ):
+                newYMin = self.__minDynamicY
+            else:
+                newYMin = self.__yMin
+        if ( newYMax is None ):
+            if ( self.__dynamicY ):
+                newYMax = self.__maxDynamicY
+            else:
+                newYMax = self.__yMax
+
+        # Validate and set limits:
+        self.__yMin, self.__yMax = self.__validateLimits(newYMin, newYMax, self.__yScale)
+
+        # Print to user:
+        self.__write.message = "The plot's Y-axis will have range [%.4E, %.4E]." % (self.__yMin, self.__yMax)
+        self.__write.print(2, 3)
+
+        # Turn off dynamic X scaling:
+        if ( self.__dynamicY ):
+            self.__dynamicY = False
+            self.__write.message = "   Dynamic Y limits will not be used."
+            self.__write.print(2, 3)
+
+        return
+
+    def updateDynamicX(self, xValues):
+        """Updates the min/max X values for a dynamic X-axis."""
+
+        # Ensure input parameters is a list:
+        if ( not isinstance(xValues, list) ):
+            self.__write.message = "A list of floats must be used to update dynamic X limits. Limits will not be updated."
+            self.__write.print(1, 3)
+            return
+
+        # Find valid min/max value:
+        listValidMin = self.__infinity
+        listMax = - self.__infinity
+        for i in range(0, len(xValues), 1):
+            # Ignore values under 0:
+            if ( xValues[i] < 0.00 ):
+                continue
+
+            # Find a valid min/max value:
+            if ( self.__xScale is self.__validScales[0] ):
+                listValidMin = min( listValidMin, xValues[i] )
+            else:
+                # For log scales, use smallest non-zero value
+                if ( xValues[i] > 0.00 ):
+                    listValidMin = min( listValidMin, xValues[i] )
+            listValidMax = max(listValidMax, xValues[i])
+
+        # Double check that min/max values are valid (i.e. /= INF)
+        if ( abs(listValidMin) == self.__infinity ):
+            self.__write.print(3, 2)
+            self.__write.message = "An invalid min. was detected in the list when updating dynamic X values (%.4E)." % (listValidMin)
+            self.__write.print(1, 2)
+            if ( self.__xScale is self.__validScales[0] ):
+                listValidMin = self.__lowestLinScaleValueAllowed
+            else:
+                listValidMin = self.__lowestLogScaleValueAllowed
+            self.__write.message = "   Assuming list min. has value %.4E." % (listValidMin)
+            self.__write.print(1, 2)
+        if ( abs(listValidMax) == self.__infinity ):
+            self.__write.print(3, 2)
+            self.__write.message = "An invalid max. was detected in the list when updating dynamic X values (%.4E)." % (listValidMax)
+            self.__write.print(1, 2)
+            listValidMax = self.__defaultUpperLim
+            self.__write.message = "   Assuming list max. has value %.4E." % (listValidMax)
+            self.__write.print(1, 2)
+
+
+        # Use lowest or second lowest value (depending on scale)
+        self.__minDynamicX = min( self.__minDynamicX, listValidMin)
+        self.__maxDynamicX = max( self.__maxDynamicX, listValidMax)
+
+        return
+
+    def updateDynamicY(self, yValues):
+        """Updates the min/max X values for a dynamic X-axis."""
+
+        # Ensure input parameters is a list:
+        if ( not isinstance(yValues, list) ):
+            self.__write.message = "A list of floats must be used to update dynamic Y limits. Limits will not be updated."
+            self.__write.print(1, 3)
+            return
+
+        # Find min/max:
+        tempMin  = float("inf")
+        temp2Min = float("inf")
+        for i in range(0, len(yValues), 1):
+            # Find the lowest and the second lowest unique value:
+            if ( yValues[i] < tempMin ):
+                temp2Min = tempMin
+                tempMin = yValues[i]
+            elif ( (yValues[i] < temp2Min) and (not yValues[i] == tempMin)):
+                temp2Min = yValues[i]
+
+            # Find maximum value:
+            self.__maxDynamicY = max( self.__maxDynamicY, yValues[i] )
+
+        # Use lowest or second lowest value (depending on scale)
+        if ( self.__yScale is self.__validScales[0] ):
+            self.__minDynamicY = min( self.__minDynamicY, tempMin)
+        else:
+            self.__minDynamicY = min( self.__minDynamicY, temp2Min)
+
+        return
+
+    def applyAxisLimits(self):
+        """Sets the axis scale, range for both the X/Y axes, and applies a grid."""
+
+        self.__applyXLimits()
+        self.__applyYLimits()
+        self.__applyScales()
+        self.__applyGrid()
 
         return
 
 
 # Actual Plot class:
-class Plot:
+class PlotClass(_PlotLabeling, _AxisLimits):
+    """The \"PlotClass\" object is meant to help users/clients use some of the
+    main plotting functions allowed by Matplotlib.
+
+    Accessible Member Functions ( Purpose ):
+    -toggleSeveralPlots   ( Allows user to change behavior )
+    -addPlotType          ( Adds a plot type; used to create multiple plot "types" on a single figure [i.e. several angles, etc.] )
+    -setLegendPos         ( Sets the legend position on the axis )
+    -addHistogram         ( Adds a histogram to the plot )
+    -addLine              ( Adds a line to the plot )
+    -finalizePlot         ( Sets up axis labels, scale, limits, annotations, and legend before showing )
+    -showCurrentPlot      ( Shows the current plot to the user )
+    -savePlot             ( Saves the plot to a file )
+    ----------------------------------------------------------------------------
+
     """
-    This is the plot class
-    """
-    # Class for printing messages:
-    __write = Print()
-    # General plot information:
-    # X information
-    __xScale = "linear"
-    __xMin  = 0
-    __xMax  = 250
-    __dynamicXLimits = True
-    __maxXPlotted = float("-inf")
-    __minXPlotted = float("inf")
-    # Y information
-    __yScale = "symlog"
-    __yMin  = 1.0E-10
-    __yMax  = 1.0E+10
-    __dynamicYLimits = True
-    __maxYPlotted = float("-inf")
-    __minYPlotted = float("inf")
-    # Regarding annotation:
-    __annotation = "?"
-    __annotateX  = 1.10 * __xMin
-    __annotateY  = 1.10 * __yMin
-    __annotationFont = detaultAnnotationFont
-    # Regarding legend information:
-    __legendEntries = []
-    __legendPos = "best"
-    # Regarding plot information:
-    __numPlots = 0
-    __numTypes = 0
-    __allowManyPlots = True
-    __boldText = True
-    __numPlottedLines = 0
+    # Defaults for the legend:
+    __defaultLegendX = float(1.0E-4)
+    __defaultLegendY = float(1.0E-4)
+    __defaultLegendPos = "best"
+    # Defaults for the plot class:
+    __defaultAllowSeveralPlots = True
 
+    # For line coloring and styles:
+    __lineColors = [ 'blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
+    'gray', 'olive', 'cyan']
+    __lineStyles = ['--','-',':','-.']
+    __numColors = len( __lineColors )
+    __numLineStyles = len( __lineStyles )
 
-    # Plot object stuff:
-    __fig, __ax = plt.subplots( figsize=(figureWidth,figureHeight) )
+    # Misc. defaults:
+    __opacity = 0.60          # Allows line to be seen through (for overlapping lines)
+    __typeExpScaling = 2      # Scale Y-Values by 10^(numPlotTypes * thisValue)
+    __useOwnHistPlot = True   # Use a line to represent a histogram
 
+    def __init__(self, allowSeveralPlots = __defaultAllowSeveralPlots, newPrint=Print()):
+        """PlotClass main constructor"""
 
-    def __init__(self, newWidth = None, newHeight = None, allowManyPlots = True, newPrint=Print()):
-        """Plot class constructor"""
-        if ( newWidth == None ):
-            newWidth = figureWidth
-        if ( newHeight == None ):
-            newHeight = figureHeight
+        # Construct parent classes:
+        super(PlotClass, self).__init__()
 
-
-        # Create figure and axis object:
-        self.__fig, self.__ax = plt.subplots( figsize=(figureWidth,figureHeight) )
-
-        # Set defaults:
-        self.__write = Print()
-        # General plot information:
-        self.__labelFont = defaultFont
-        self.__titleFont = self.__labelFont + 2
-        self.__annotation = "?"
-        self.__annotateX  = 1.10 * self.__xMin
-        self.__annotateY  = 1.10 * self.__yMin
-        self.__annotationFont = detaultAnnotationFont
-        # X Information
-        self.__xLabel = "?"
-        self.__xScale = "linear"
-        self.__xMin = 0
-        self.__xMax = 250
-        self.__dynamicXLimits = True
-        self.__minXPlotted = float("inf")
-        self.__maxXPlotted = float("-inf")
-        # Y Information
-        self.__yLabel = "?"
-        self.__yScale = "symlog"
-        if ( self.__yScale == "linear" ):
-            self.__yMin = 0
-            self.__yMax = 10
-        else:
-            self.__yMin = 1.0E-10
-            self.__yMax = 1.0E+10
-        self.__dynamicYLimits = True
-        self.__minYPlotted = float("inf")
-        self.__maxYPlotted = float("-inf")
-
-        # Regarding plot information:
-        self.__numPlots = 0
-        self.__legendEntries = []
-        self.__legendPos = "best"
-        # Regarding the number of line "types" (various angles, etc.)
-        self.__numTypes = 0
-        self.allowsManyPlots( allowManyPlots )
-        self.__boldText = True
-        self.__numPlottedLines = 0
-
-
-        # Set values passed in:
+        # Set default values:
         self.__write = newPrint
+        self.__resetMembers()
 
+        # Set user/client specified values:
+        self.toggleSeveralPlots( allowSeveralPlots )
 
-        # Set plot details:
-        self.setPlotDetails()
+        return
 
-    def setPlotDetails(self):
-        """Sets plot details"""
-        # Set default plot values:
-        self.setTitle()
-        self.setXLabel()
-        self.setYLabel()
-        self.setGrid()
-        self.setScale()
-        self.setX()
-        self.setY()
+    def __del__(self):
+        """PlotClass destructor method"""
+        self.__resetMembers()
 
-    def allowsManyPlots(self, allowed = True):
-        """Changes value of self.__allowManyPlots to true to toggle many plots"""
-        if ( not isinstance(allowed, bool) ):
-            self.__write.message = "Toggling the allowance of many plot types accepts only boolean types. Turning many types on..."
+        return
+
+    def __resetMembers(self):
+        """Resets all the class's member-variables to their defaults"""
+
+        # Regarding legend information:
+        self.__legendEntries = []
+        self.__legendPos = self.__defaultLegendPos
+
+        # Regarding plot information
+        self.__totNumPlottedLines = 0
+        self.__allowSeveralPlots = self.__defaultAllowSeveralPlots
+        self.__numPlotTypes = 0       # Number of plot types created
+        self.__numPlotTypeLines = 0   # Number of lines in the plot type
+
+        return
+
+    def __applyLegend(self):
+        """Applies the legend to the plot"""
+
+        self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos)
+
+        return
+
+    def __addLegendLabel(self, someLabel="No label was given"):
+        """Adds a legend label to the legend"""
+
+        # Validate argument:
+        if ( not isinstance(someLabel, str) ):
+            try:
+                someLabel = str(someLabel)
+            except:
+                self.__write.print(3, 2)
+                self.__write.message = "Could not determine line type label: ", someLabel
+                self.__write.print(1, 2)
+                self.__write.message = "   No legend label will be added."
+                self.__write.print(1, 2)
+                return
+
+        # Add label, if appropriate:
+        if ( self.__allowSeveralPlots ):
+            if ( self.__numPlotTypes == 0 ):
+                self.__legendEntries.append( someLabel )
+        else:
+            self.__legendEntries.append( someLabel )
+
+        return
+
+    def __addedLine(self, someLabel="No label was given"):
+        """Checks to add a legend label and adds a plot line to the object"""
+
+        self.__addLegendLabel( myLabel )
+        self.__numPlotTypeLines += 1
+        self.__totNumPlottedLines += 1
+
+        return
+
+    def __findLastNonZeroValue(self, someNumbers):
+        """This function returns the index of the last non-zero valued entry
+        in a list or tuple."""
+        lastIndex = None
+
+        # Ensure the numbers are a list/tuple of floats or ints:
+        if ( not isinstance(someNumbers, (list, tuple)) ):
+            self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples of floats and ints."
             self.__write.print(1, 2)
-            allowed = True
+            return lastIndex
+        if ( not isinstance(someNumbers, (int, float)) ):
+            self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples of floats and ints."
+            self.__write.print(1, 2)
+            return lastIndex
+
+        # Find last non-zero valued index:
+        lastIndex = len(someNumbers) - 1
+        for i in range(0, lastIndex, 1):
+            if ( someNumbers[lastIndex-i] > 0 ):
+                lastIndex -= i
+                break
+
+        return lastIndex
+
+    def __getLineColor(self):
+        """Returns the line color to be used (based on allowance of several plot types)"""
+
+        colorFlag = 0
+        if ( self.__allowSeveralPlots ):
+            colorFlag = self.__numPlotTypes
+        else:
+            colorFlag = self.____totNumPlottedLines
+
+        return self.__lineColors[ colorFlag % numColors ]
+
+    def __getLineStyle(self):
+        """Returns the line style to be used (based on allowance of several plot types)"""
+
+        styleFlag = 0
+        if ( self.__allowSeveralPlots ):
+            styleFlag = self.__numPlotTypeLines
+        else:
+            styleFlag = 0
+
+        return self.__lineStyles[ styleFlag % numLineStyles ]
+
+    def toggleSeveralPlots(self, allowSeveralPlots = True):
+        """Toggles the allowance of printing several plots on the graph.
+        Allowance gives lines new colors
+        \t(lines within the same \"plot\" have same color, different line style)
+        """
+        # Validate argument:
+        if ( not isinstance(allowSeveralPlots, bool) ):
+            try:
+                allowSeveralPlots = bool(allowSeveralPlots)
+            except:
+                self.__write.print(3, 2)
+                self.__write.message = "Unable to determine argument (\"%s\") type for allowing several plots." % ( str(allowSeveralPlots) )
+                self.__write.print(1, 2)
+                allowSeveralPlots = self.__defaultAllowSeveralPlots
+                self.__write.message = "  The default (%r) will be used." % ( allowSeveralPlots )
+                self.__write.print(1, 2)
 
         # Ensure no data has been entered; if so, warn user that labels may be skewed.
-        if ( not self.__numPlots == 0 ):
+        if ( self.__totNumPlottedLines > 0 ):
+            self.__print(3, 3)
             self.__write.message = "Toggling the allowance of many plots should be done when no data has been specified for proper appearance."
+            self.__write.print(1, 3)
+            self.__write.message = "   All data plotted herein will have the same color."
+            self.__write.print(1, 3)
+
+        self.__allowManyPlots = allowSeveralPlots
+
+        return
+
+    def addPlotType(self):
+        """Creates a new plot within the figure
+        (modifies scaling, colors and/or linestyle of proceeding lines)
+        """
+        if ( self.__allowSeveralPlots ):
+            self.__numPlotTypes += 1
+            self.__numPlotTypeLines = 0
+        else:
+            self.__write.message = "Cannot add a plot type. Allowance of several plots must be toggled on prior."
             self.__write.print(1, 2)
 
-        self.__allowManyPlots = allowed
+        return
 
-    def addType(self):
-        """Appends a new type for when many plots are used"""
-        if ( self.__allowManyPlots ):
-            self.__numTypes += 1
-            # Rest number of plots for the type:
-            self.__numPlots = 0
-        else:
-            self.__write.message = "Cannot add another plot type; specify prior to adding data."
-            self.__write.print(1, 2)
-
-    def setDynamicLimits(self, dynamicXLims = True, dynamicYLims = True):
-        """Sets whether or not to use dynamic X/Y limits"""
-        self.__dynamicXLimits = dynamicXLims
-        self.__dynamicYLimits = dynamicYLims
-
-    def setGrid(self, showGrid=True, whichAxis='both', gridColor='0.9', gridStyle=':'):
-        """Sets grid on the plot"""
-        self.__ax.minorticks_on()
-        self.__ax.grid(b=showGrid, which=whichAxis, color=gridColor, linestyle=gridStyle, alpha=1)
-    #    self.__ax.grid(b=showGrid, which='minor', color='0.6',     linestyle=gridStyle, alpha=0.2)
-
-    def setTitle(self, newTitle=None):
-        """Sets plot title"""
-
-        # Print to user:
-        if ( not newTitle == None ):
-            self.__plotName = newTitle
-            self.__write.message = "The plot will be titled \"%s\"." % (self.__plotName)
-            self.__write.print(2, 3)
-
-        if ( self.__boldText ):
-            self.__plotName = "{\\bf " + self.__plotName + "}"
-
-        # Set title:
-        self.__ax.set_title(self.__plotName, fontsize=self.__titleFont)
-
-    def setXLabel(self, newLabel=None ):
-        """Sets the X label for the plot object"""
-        if ( not newLabel == None ):
-            self.__xLabel = newLabel
-
-        if ( self.__boldText ):
-            self.__xLabel = "{\\bf " + self.__xLabel + "}"
-
-        self.__ax.set_xlabel( self.__xLabel, fontsize=self.__labelFont )
-
-    def setYLabel(self, newLabel=None ):
-        """Sets the Y label for the plot object"""
-        if ( not newLabel == None ):
-            self.__yLabel = newLabel
-
-        if ( self.__boldText ):
-            self.__yLabel = "{\\bf " + self.__yLabel + "}"
-
-        self.__ax.set_ylabel( self.__yLabel, fontsize=self.__labelFont )
-
-    def setX(self):
-        """Set X values (min, max) on the plot"""
-        # Ensure limits are valid:
-        if ( self.__xMin <= 0 ):
-            self.__xMin = 0
-
-        if ( self.__xMin >= self.__xMax ):
-            if ( self.__xMin == 0 ):
-                self.__xMax = 250
-            else:
-                self.__xMax = 1.25 * self.__xMin
-
-        # Set new limits:
-        if ( self.__dynamicXLimits and self.__numPlottedLines > 0 ):
-            xMin = (1 - dynamicXScaling) * self.__minXPlotted
-            if ( xMin < 0 ):
-                xMin = 0
-            xMax = (1 + dynamicXScaling) * self.__maxXPlotted
-            if ( xMax <= xMin ):
-                if ( xMin == 0 ):
-                    xMax = 10
-                else:
-                    xMax = (1 + dynamicXScaling) * xMin
-            print("Dynamic X:", xMin, xMax)
-            self.__ax.set_xlim(xMin, xMax)
-        else:
-            self.__ax.set_xlim(self.__xMin, self.__xMax)
-
-    def xMin(self, newXVal = 0 ):
-        """Sets minimum X value"""
-        # Set value:
-        self.__xMin = newXVal
-        self.__dynamicXLimits = False
-
-
-        # Print to user:
-        self.__write.message = "A new X min (%0.2f) will be used for this plot. Dynamic X is off." % (self.__xMin)
-        self.__write.print(2, 3)
-
-
-        # Set limits:
-        self.setX()
-
-    def xMax(self, newXVal = 1000 ):
-        """Sets maximum X value"""
-        self.__xMax = newXVal
-        self.__dynamicXLimits = False
-
-
-        # Print to user:
-        self.__write.message = "A new X max (%0.2f) will be used for this plot. Dynamic X is off." % (self.__xMax)
-        self.__write.print(2, 3)
-
-        # Set limits:
-        self.setX()
-
-    def setScale(self, xScale=None, yScale=None):
-        """Sets scale on the axis (linear or log for X/Y)"""
-        __subXTicks = [5]
-        __subYTicks = [2, 3, 4, 5, 6, 7, 8, 9]
-        if ( not xScale == None ):
-            self.__xScale = xScale
-        if ( not yScale == None ):
-            self.__yScale = yScale
-
-
-        # Set X/Y scales:
-        self.__ax.set_xscale(self.__xScale, subsx=__subXTicks)
-        # Setting of yscale here makes smallest Y as 10^0 (insufficient)
-        # self.__ax.set_yscale(self.__yScale, subsy=__subYTicks, nonposy='clip')
-
-    def setY(self):
-        """Set Y values (min, max) on the plot"""
-        # Ensure limits are valid:
-        if ( self.__yScale == "log" or self.__yScale == "symlog" ):
-            if ( self.__yMin <= 0 ):
-                self.__yMin = 1.0E-10
-        else:
-            if ( self.__yMin <= 0 ):
-                self.__yMin = 0
-
-        if ( self.__yMin >= self.__yMax ):
-            if ( self.__yMin <= 0 ):
-                self.__yMax = 1.0E+10
-            else:
-                self.__yMax = 1.0E3 * self.__yMin
-
-        # Set new limits:
-        if ( self.__dynamicYLimits and self.__numPlottedLines > 0 ):
-            yMin = (1 - dynamicYScaling) * self.__minYPlotted
-            if ( yMin < 0 ):
-                yMin = 0
-            yMax = (1 + dynamicYScaling) * self.__maxYPlotted
-            if ( yMax <= yMin ):
-                if ( yMin == 0 ):
-                    yMax = 10
-                else:
-                    yMax = (1 + dynamicYScaling) * yMin
-            print("Dynamic Y:", yMin, yMax)
-            self.__ax.set_ylim(yMin, yMax)
-        else:
-            self.__ax.set_ylim(self.__yMin, self.__yMax)
-
-    def yMin(self, newyVal = 1.0E-10 ):
-        """Sets minimum Y value"""
-        # Set value:
-        self.__yMin = newyVal
-        self.__dynamicYLimits = False
-
-
-        # Print to user:
-        self.__write.message = "A new Y min (%0.2e) will be used for this plot. Dynamic Y is off." % (self.__yMin)
-        self.__write.print(2, 3)
-
-
-        # Set limits:
-        self.setY()
-
-    def yMax(self, newYVal = 1.0E10 ):
-        """Sets maximum Y value"""
-        self.__yMax = newYVal
-        self.__dynamicYLimits = False
-
-
-        # Print to user:
-        self.__write.message = "A new Y max (%0.2e) will be used for this plot. Dynamic Y is off." % (self.__yMax)
-        self.__write.print(2, 3)
-
-        # Set limits:
-        self.setY()
-
-    def legendPos(self, loc = "best", xStart = None, yStart = None ):
+    def setLegendPos(self, loc = __defaultLegendPos, xStart = __defaultLegendX, yStart = __defaultLegendY ):
         """Sets position of legend"""
         # Default values (minimum for uniqueness)
         __uniqueLOC = ['b', 'upper r', 'upper l', 'lower l',
@@ -632,8 +1040,6 @@ class Plot:
         'upper center', 'center']
         # For using coordinate values
         __coordinateFlag = "co"
-        __defaultLOC = "best"
-
 
         # Reduced LOC (location)
         loc = loc.strip().lower()
@@ -641,7 +1047,7 @@ class Plot:
         # Validate argument:
         validArgument = False
         for i in range(0, len(__validLOC), 1):
-            if ( loc[ : len(__uniqueLOC[i]) ] == __uniqueLOC[i] ):
+            if ( loc.startswith(__uniqueLOC[i]) ):
                 loc = __validLOC[i]
                 validArgument = True
                 break
@@ -649,159 +1055,94 @@ class Plot:
         # Set legend location:
         if ( validArgument ):
             self.__legendPos = loc
-        elif ( loc[ : len(__coordinateFlag)] == __coordinateFlag ):
+        elif ( loc.startswith(__coordinateFlag) ):
             # Use X/Y Position instead; ensure X/Y combo will appear in axis:
-            if ( xStart < self.__xMin ):
-                xStart = self.__xMin
-            elif ( xStart > self.__xMax ):
-                xStart = self.__xMax
-            if ( yStart < self.__yMin ):
-                yStart = self.__yMin
-            elif ( yStart > self.__yMax ):
-                yStart = self.__yMax
+            if ( xStart <= 0.00 ):
+                xStart = self.__defaultLegendX
+            if ( yStart <= 0.00 ):
+                yStart = self.__defaultLegendY
 
             self.__legendPos = (xStart, yStart)
 
         else:
-            # Bad argument; assume "best" is used
-            self.__write.message = "Bad legend position flag given. Assuming 'best'."
+            # Bad argument; use defaults
+            self.__write.print(3, 3)
+            self.__write.message = "Unable to validate legend position flag (\"%s\")." % (loc)
             self.__write.print(1, 3)
-            loc = __defaultLOC
+            loc = self.__defaultLegendPos
+            self.__write.message = "   \"%s\" will be used." % loc
+            self.__write.print(1, 3)
             self.__legendPos = loc
 
-    def __setPlottedX(self, xValues):
-        """Sets the min/max x values plotted in the class"""
-        if ( not isinstance(xValues, list) ):
-            self.__write.message = "The values must be a list. Cannot determine min/max plotted X values. Dynamic limits will be turned off."
-            self.__write.print(1, 3)
-            self.__dynamicXLimits = False
-            return
-
-        # Find min/max:
-        for i in range(0, len(xValues), 1):
-            self.__minXPlotted = min( self.__minXPlotted, xValues[i] )
-            self.__maxXPlotted = max( self.__maxXPlotted, xValues[i] )
-
-    def __setPlottedY(self, yValues):
-        """Sets the min/max y values plotted in the class"""
-        if ( not isinstance(yValues, list) ):
-            self.__write.message = "The values must be a list. Cannot determine min/max plotted Y values. Dynamic limits will be turned off."
-            self.__write.print(1, 3)
-            self.__dynamicYLimits = False
-            return
-
-        # Find min/max:
-        tempMin, temp2Min = float("inf"), float("inf")
-        for i in range(0, len(yValues), 1):
-            if ( self.__yScale == "log" or self.__yScale == "symlog" ):
-                if ( yValues[i] < tempMin ):
-                    temp2Min = tempMin
-                    tempMin = yValues[i]
-                elif ( (yValues[i] < temp2Min) and (not yValues[i] == tempMin)):
-                    temp2Min = yValues[i]
-            else:
-                temp2Min = min( temp2Min, yValues[i] )
-            self.__maxYPlotted = max( self.__maxYPlotted, yValues[i] )
-
-        self.__minYPlotted = min( self.__minYPlotted, temp2Min)
-
-    def lineColor(self):
-        """Returns the line color to be used"""
-        return lineColors[ self.__numTypes % numColors ]
-
-    def lineStyle(self):
-        """Returns the line style to be used"""
-        return lineStyles[ self.__numPlots % numLineStyles ]
-
-    def annotateLine(self, annotation = None, xVal = None, yVal = None, textColor = None):
-        """Adds an annotation to the end of the line, or where requested by user (depending on dynamic X/Y)"""
-        if ( annotation == None ):
-            annotation = self.__legendEntries[len(self.__legendEntries)-1]
-            self.__write.message = "No annotation text given to annotate line with. Using last line label (\"%s\")." % ( annotation )
-            self.__write.print(1, 2)
-
-        if ( xVal == None ):
-            # Use dynamic X or a little less than requested x value:
-            if ( self.__dynamicXLimits ):
-                xVal = (1 - dynamicXScaling) * self.__maxXPlotted
-            else:
-                xVal = (1 - dynamicXScaling) * self.__xMax
-        elif ( xVal < 0 ):
-            xVal = abs(xVal)
-
-        if ( yVal == None ):
-            # Use dynamic X or a little less than requested x value:
-            if ( self.__dynamicXLimits ):
-                yVal = (1 - dynamicYScaling) * self.__maxYPlotted
-            else:
-                yVal = (1 - dynamicYScaling) * self.__yMax
-        else:
-            if ( yVal < 0 ):
-                yVal = abs(yVal)
-
-        if ( textColor == None ):
-            textColor = self.lineColor()
-
-        if ( self.__boldText ):
-            annotation = "{\\bf " + annotation + "}"
-
-        # Now create annotation:
-        self.__ax.annotate(annotation,
-        xy=(xVal, yVal),
-        xycoords="data",
-        horizontalalignment="left",
-        verticalalignment="top",
-        fontsize=self.__annotationFont,
-        color = textColor,
-        alpha= opacity, clip_on=True )
-
+        return
 
     # For adding plots:
-    def addHistogram(self, myBins, myValues, myLabel = "No label given", xScale = 1, yScale = 1):
+    def addHistogram(self, myBins, myValues, myLabel="No label given", xScale=1, yScale=1):
         """Adds a histogram to the plot"""
-        # Ensure scaling is >0:
-        if ( xScale <= 0 ):
-            xScale = 1
-        if ( yScale <= 0 ):
-            yScale = 1
+        # Ensure scaling is valid (>0):
+        if ( isinstance(xScale, (float, int)) ):
+            if ( xScale <= 0 ):
+                xScale = 1.00
+        else:
+            xScale = 1.00
+        if ( isinstance(yScale, (float, int)) ):
+            if ( yScale <= 0 ):
+                yScale = 1.00
+        else:
+            yScale = 1.00
 
-        # Validate histogram data:
-        if ( myBins[0] < 0 ):
+        # Validate the types of the bins and values:
+        if ( not isinstance(myBins, list) ):
+            self.__write.message = "The passed in histogram bins must be a list."
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to create histogram."
+            self.__write.print(1, 2)
+            return
+        if ( not isinstance(myValues, list) ):
+            self.__write.message = "The passed in histogram values must be a list."
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to create histogram."
+            self.__write.print(1, 2)
+            return
+
+        # Shift and scale histogram data accordingly:
+        # (shift and scale bins)
+        shift = 0.00
+        if ( myBins[0] < 0.00 ):
             shift = -myBins[0]
             self.__write.message = "Histogram bins values will be shifted up by (%f) to ensure physicality." % (shift)
             self.__write.print(2, 2)
-        else:
-            shift = 0
         for i in range(0, len(myBins), 1):
             myBins[i] += shift
             myBins[i] *= xScale
-        if ( myValues[0] < 0 ):
-            shift = -myValues[0]
+        # (shift and scale values)
+        shift = 0.00
+        for i in range(0, len(myValues), 1):
+            shift = min(shift, myValues[i] )
+        if (shift < 0.00 ):
+            shift = abs(shift)
             self.__write.message = "Histogram bins values will be shifted up by (%f) to ensure physicality." % (shift)
             self.__write.print(2, 2)
         else:
-            shift = 0
+            shift = 0.00
         for i in range(0, len(myValues), 1):
             myValues[i] += shift
             myValues[i] *= yScale
 
         # Determine the last value that has non-zero entry:
-        lastValueIndx = len(myValues) - 1
-        for i in range(0, lastValueIndx, 1):
-            if ( not myValues[lastValueIndx-i] <= 0 ):
-                lastValueIndx = lastValueIndx-i
-                break
+        lastValueIndx = self.__findLastNonZeroValue( myValues )
 
         # Use the minimum number of applicable data points:
         numValidData = min( lastValueIndx, len(myBins)-1 )
 
+        # Obtain bin bounds and associated values:
         plottedBins   = []
         plottedValues = []
         plottedBins.append( myBins[0] )
         for i in range(0, numValidData, 1):
             # Ensure positive (or non-zero) bin widths:
             if ( myBins[i+1] < myBins[i] ):
-                self.__write.message = "In Plot class: Negative bin-width is not valid (range=[%.2f, %.2f). Using bin width of 0." % (myBins[i], myBins[i+1])
+                self.__write.message = "Negative bin-width is not valid (range=[%.2f, %.2f). Using bin width of 0." % (myBins[i], myBins[i+1])
                 self.__write.print(1, 2)
                 myBins[i+1] = myBins[i]
             plottedBins.append( myBins[i+1] )
@@ -814,23 +1155,19 @@ class Plot:
             plottedValues.append( myValues[i] )
 
         # Obtain min/max X/Y:
-        self.__setPlottedX( plottedBins )
-        self.__setPlottedY( plottedValues )
+        self.updateDynamicX( plottedBins )
+        self.updateDynamicY( plottedValues )
 
         if ( not useOwnHistPlot ):
             # Plot histogram:
-            self.__ax.hist(plottedValues, bins=plottedBins, histtype='step', color=self.lineColor())
-            if ( self.__numTypes == 0 ):
-                self.__legendEntries.append( myLabel )
-            self.__numPlots += 1
-            self.__numPlottedLines += 1
+            self.__axis.hist(plottedValues, bins=plottedBins, histtype='step', color=self.__getLineColor())
+            self.__addedLine( myLabel )
+
         else:
             # Create new X/Y values to emulate the look of a histogram (i.e. 2 Y values per X value, except at edges)
             xVals = []
             yVals = []
-
-            # Left edge of first bin:
-            xVals.append( plottedBins  [0] )
+            xVals.append( plottedBins[0] )
             yVals.append( plottedValues[0] )
             for i in range(1, len(plottedValues), 1):
                 # Right edge of current bin:
@@ -840,25 +1177,39 @@ class Plot:
                 # Left edge of next bin:
                 xVals.append( plottedBins  [i    ] )
                 yVals.append( plottedValues[i    ] )
-
             xVals.append( plottedBins  [len(plottedBins  )-1] )
             yVals.append( plottedValues[len(plottedValues)-1] )
 
-            # Now plot as a line:
-            self.addLine(xVals, yVals, myLabel, xScale, yScale)
+            # Now plot as a line (note: scaling has already been done)
+            self.addLine(xVals, yVals, myLabel, 1.00, 1.00)
 
-    def addLine(self, xVals, yVals, myLabel = "No label given", xScale = 1, yScale = 1):
+        return
+
+    def addLine(self, xVals, yVals, myLabel="No label given", xScale=1, yScale=1):
         """Adds a line to the plot"""
-        # Ensure scaling is >0:
-        if ( xScale <= 0 ):
-            xScale = 1
-        if ( yScale <= 0 ):
-            yScale = 1
+        # Ensure scaling is valid (>0):
+        if ( isinstance(xScale, (float, int)) ):
+            if ( xScale <= 0 ):
+                xScale = 1.00
+        else:
+            xScale = 1.00
+        if ( isinstance(yScale, (float, int)) ):
+            if ( yScale <= 0 ):
+                yScale = 1.00
+        else:
+            yScale = 1.00
 
-        # Verify x/y coords. are lists:
-        if ( not isinstance(xVals, list) or not isinstance(yVals, list) ):
-            validXY = False
-            self.__write.message = "X and Y coordinates for lines must be lists. Cannot add line..."
+        # Validate the types of the bins and values:
+        if ( not isinstance(myBins, list) ):
+            self.__write.message = "The passed in histogram bins must be a list."
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to create histogram."
+            self.__write.print(1, 2)
+            return
+        if ( not isinstance(myValues, list) ):
+            self.__write.message = "The passed in histogram values must be a list."
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to create histogram."
             self.__write.print(1, 2)
             return
 
@@ -869,7 +1220,6 @@ class Plot:
                 xShift = min(xShift, xVals[i])   # Obtain miniminum x value in set:
         for i in range(0, len(yVals), 1):
                 yShift = min(yShift, yVals[i])   # Obtain minimum y value in set:
-
         # Make shifts positive, warn user if shifting:
         xShift = abs(xShift)
         yShift = abs(yShift)
@@ -882,24 +1232,18 @@ class Plot:
         for i in range(0, len(yVals), 1):
             yVals[i] += yShift
 
-        # Determine the last value that has non-zero entry:
-        lastValueIndx = len(yVals) - 1
-        for i in range(0, lastValueIndx, 1):
-            if ( not yVals[lastValueIndx-i] <= 0 ):
-                lastValueIndx = lastValueIndx-i
-                break
-
         # For multiple types, scale:
-        yScaleFactor = -self.__numTypes * typeExpScaling
+        yScaleFactor = -self.__numPlotTypes * typeExpScaling
         yScale = yScale * pow(10, yScaleFactor)
         if ( self.__numTypes > 0 ):
             self.__write.message = "Sim. data for \"%s\" is being scaled by 10^(%.1f) for clarity." % (myLabel, yScaleFactor)
             self.__write.print(2, 2)
 
         # Obtain x/y set for as many pairs between X/Y coords:
+        lastIndex = self.__findLastNonZeroValue( yVals )
+        numPairs = min( len(xVals), len(yVals), lastValueIndx )
         xCoord = []
         yCoord = []
-        numPairs = min( len(xVals), len(yVals), lastValueIndx )
         if ( numPairs <= 0 ):
             self.__write.message = "No data passed in to create a line plot. No plot will be created."
             self.__write.print(1, 2)
@@ -908,35 +1252,41 @@ class Plot:
             xCoord.append( xScale * xVals[i] )
             yCoord.append( yScale * yVals[i] )
 
-
         # Obtain min/max X/Y:
-        self.__setPlottedX( xCoord )
-        self.__setPlottedY( yCoord )
+        self.updateDynamicX( xCoord )
+        self.updateDynamicY( yCoord )
 
-        # X/Y values are all valid, as well as scaling factors; create line:
-        if ( self.__yScale == "log" or "symlog" ):
-            self.__ax.semilogy( xCoord, yCoord,
-            linestyle=self.lineStyle(), color = self.lineColor(), alpha= opacity )
+        thisLineColor = self.__getLineColor()
+        thisLineStyle = self.__getLineStyle()
+
+        # X/Y values are all valid; create line:
+        if ( self._AxisLimits__yScale == self._AxisLimits__validScales[0] ):
+            self.__axis.plot( xCoord, yCoord, linestyle=thisLineStyle,
+            color=thisLineColor, alpha=self.__opacity )
         else:
-            self.__ax.plot( xCoord, yCoord,
-            linestyle=self.lineStyle(), color = self.lineColor(), alpha= opacity )
+            self.__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
+            color=thisLineColor, alpha=self.__opacity )
 
-        # Add plot and legend entry:
-        if ( self.__numTypes == 0 ):
-            self.__legendEntries.append( myLabel )
-        self.__numPlots += 1
-        self.__numPlottedLines += 1
+        # Add legend entry for first few lines (w/ multiple plots)
+        self.__addedLine( myLabel )
 
+        return
 
     # For finishing a plot:
-    def __finalizePlot(self):
+    def finalizePlot(self):
         """Finalizes the plot axis and behaviors"""
-        self.setPlotDetails()
-        self.__ax.legend(self.__legendEntries, loc=self.__legendPos)
 
-    def showCurrent(self, pauseTime=100):
+        self.labelPlot()         # Apply labels to the plot:
+        self.applyAxisLimits()   # Sets up axis range and scale
+        self.__applyLegend()
+
+        return
+
+    def showCurrentPlot(self, pauseTime=100):
         """Shows the plot"""
-        if ( self.__numPlottedLines <= 0 ):
+
+        # Skip plotting if nothing exists on the plot:
+        if ( self.__totNumPlottedLines <= 0 ):
             # No plots or types created; warn client
             self.__write.message = "Plot contains no lines. Plot will not be saved."
             self.__write.print(1, 2)
@@ -945,39 +1295,38 @@ class Plot:
         plt.ion()
         plt.show()
         time.sleep( pauseTime )
-        plt.close('all')
+
+        return
 
     def savePlot(self, figName="temp", figDPI = 300, overrideExisting=False, figBBox = 'tight', figPad=0.15, showPlot = False):
         """Save the plot to a file"""
 
         # Set plot details:
-        self.__finalizePlot()
+        self.finalizePlot()
 
-
-        if ( self.__numPlottedLines <= 0 ):
+        # Skip plotting if nothing exists on the plot:
+        if ( self.__totNumPlottedLines <= 0 ):
             # No plots or types created; warn client
             self.__write.message = "Plot contains no lines. Plot will not be saved."
             self.__write.print(1, 2)
             return
-
 
         if ( figDPI > 1200 ):
             figDPI = 1200
         elif ( figDPI < 300 ):
             figDPI = 300
 
-
         # Write that plot is being saved
         ext = ".png"
         figName = fileModule.verifyFileName( figName, ext, overrideExisting )
         self.__write.message = "The figure is being saved as \"%s\"." % (figName)
-        self.__write.print(2, 2)
-
+        self.__write.print(2, 1)
 
         # Save file:
         plt.savefig(figName, bbox_inches=figBBox, pad_inches=figPad, dpi = figDPI)
 
-
         # Show the saved file:
         if ( showPlot ):
-            self.showCurrent(3)
+            self.showCurrentPlot(3)
+
+        return

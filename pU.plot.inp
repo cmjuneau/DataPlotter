@@ -10,66 +10,16 @@ c annotateX 0.51
 c annotateY 0.94
 save He4Plot-pU30.png
 dpi 1200
-c xMin 
-xMax 150
-c yMin 1e-9
-c yMax 5e1
+xscale linear
+yscale log
+
+
+xrange 0 150
+yrange 1.0E-6 1.0E+2
 annotateLine particle 0 0.
 annotateLine none 0 0.
 annotateLine angle 0 0.
 annotateLine angle 0 0.
 scaleFactor 2
 display none
-end plot
-
-
-
-
-c ------------------------------------------------------------------
-comment Compares CEM, GSM versions, LAQGSM, and data graphically.
-particle Li6
-plot dd
-read pU.dd.txt
-angle 10
-annotate $^{238}U$ (5.5 GeV $p$, X)
-c annotateX 0.51
-c annotateY 0.94
-save Li6Plot-pU10.png
-dpi 1200
-xMax 150
-yMin 1e-4
-yMax 3e0
-display none
-end plot
-
-c ------------------------------------------------------------------
-comment Compares CEM, GSM versions, LAQGSM, and data graphically.
-particle B10
-plot ei
-data B10.eint.dat
-read pU.dd.txt
-annotate $^{238}U$ (5.5 GeV $p$, X)
-annotateX 0.02
-annotateY 0.44
-xMax 185
-save B10Plot-pUEI.png
-dpi 1200
-legendX 0.55
-legendY 0.21
-display none
-end plot
-
-c ------------------------------------------------------------------
-comment Compares CEM, GSM versions, LAQGSM, and data graphically.
-particle C12
-plot ei
-data C12.eint.dat
-read pU.dd.txt
-annotate $^{238}U$ (5.5 GeV $p$, X)
-c annotateX 0.32
-c annotateY 0.45
-display none
-xMax 185
-save C12Plot-pUEI.png
-dpi 1200
 end plot

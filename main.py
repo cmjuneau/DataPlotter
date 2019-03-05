@@ -15,8 +15,12 @@ This file contains the methods used to plot stuff
 import sys
 import datetime
 # Modules:
-from plotClass import Plot
+from gsmPlotClass import PlotGSMInputFile
 from outputClass import GSMOutput, CEMOutput
+
+# For testing ideas:
+import testingModule
+
 
 # VERSION Number:
 __version__ = "1.0.0"
@@ -50,6 +54,13 @@ def exit():
 ################################################################################
 printTime("Start")
 
+if ( testingModule.letsTest ):
+    yum = testingModule.Dinner()
+    yum.printFood()
+
+
+    exit()
+
 # Plot labeling:
 xLabel     = "$^{4}$He Energy [MeV]"
 yLabel     = "Cross Section [mb/MeV/sr]"
@@ -57,8 +68,12 @@ title      = "Double Differential Spectra ($^{4}$He)"
 annotation = "$^{238}$U (5.5 GeV p, X) $^{4}$He"
 figName    = "trial1"
 
-# Creating plot object:
-myPlot = Plot()
+# Create input file class:
+inputObj = PlotGSMInputFile("pU.plot.inp")
+
+exit()
+
+
 # X limits:
 myPlot.xMin(0)
 myPlot.xMax(150)
