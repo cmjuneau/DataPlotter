@@ -12,24 +12,24 @@ simLabel CEM GSM
 #
 c Plot Type Arguments:
 c ----------------------------------
-particle n he4
 plot doubledifferential
-angle 30 60 90
+particle z=14
+angle 45
 #
 c Annotation Arguments:
 c ----------------------------------
-annotate Some Random Annotation
-annotatePos 50 1.0E-02
-otherAnnotate Some other random annotation
-otherAnnotatePos 20 3.0E-5
-otherAnnotate Another random annotation
-otherAnnotatePos 1.0E-5 3.0E-5
-otherAnnotateColor green blue
+annotate $^{238}$U (5.5~GeV p, X) Si
+annotatePos 10 2.0E-02
+# otherAnnotate neutrons
+# otherAnnotatePos 110 1.0E+01
+# otherAnnotate protons ($\times 10^{-2}$)
+# otherAnnotatePos 110 5.0E-02
+otherAnnotateColor blue
 #
 c Misc. Arguments:
 c ----------------------------------
 save zTemp
-dpi 300
+dpi 1200
 show True
 override True
 #
@@ -38,7 +38,7 @@ c ----------------------------------
 # xscale linear
 # yscale log
 # xrange 0 150
-# yrange 1.0E-6 1.0E+2
+# yrange 3.0E-01 1.0E+02
 #
 c Figure Labels:
 c ----------------------------------

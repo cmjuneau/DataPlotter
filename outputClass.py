@@ -38,30 +38,20 @@ numParticleTypes = len( particleTypes )
 class GSMOutput:
     """GSM Output Class"""
 
-    __write    = Print()
-    __fileName = "gsm.out"
-    __fileData = []
-    __fileLen  = 0
-    __fileRead = False
-    __pisaData = gsmData.DoubleDiffPISA( __write )
-
     def __init__(self, fileName = None, newPrint = Print() ):
         """Constructor for the GSM Output class"""
 
         # Reset all values:
         self.__write = newPrint
-        self.__fileData = []
-        self.__fileLen = 0
-        self.__fileRead = False
-        self.__pisaData = gsmData.DoubleDiffPISA( self.__write )
-
 
         # Set values from constructor:
         if ( fileName == None ):
             self.__write.message = "A filename must be passed in to create an output file object."
             self.__write.print(0, 1)
             return
-            
+
+        self.__resetMembers()
+
         self.__fileName = fileName
         doesFileExist = fileExists( self.__fileName )
         if ( not doesFileExist ):
@@ -69,19 +59,37 @@ class GSMOutput:
             self.__write.print(1, 2)
             return
 
-
         # Read file:
         self.__fileData = readFile( self.__fileName )
         self.__fileLen  = len( self.__fileData )
         self.__fileRead = True
 
-
         # Parse file data:
         self.__parseData()
 
+        return
+
+    def __resetMembers(self):
+        """Resets all members in the object"""
+
+        self.__fileData = []
+        self.__fileLen = 0
+        self.__fileRead = False
+        self.__pisaData = gsmData.DoubleDiffPISA( self.__write )
+
+        # Read file:
+        self.__fileName = ""
+        self.__fileData = []
+        self.__fileLen  = 0
+        self.__fileRead = False
+
+        return
+
     def __del__(self):
         """Class destructor"""
-        self.__fileData = None
+        self.__resetMembers()
+
+        return
 
     def __parseData(self):
         """Interface for parsing out all data from the read file"""
@@ -90,9 +98,9 @@ class GSMOutput:
         self.__write.message = "\tParsing data..."
         self.__write.print(2, 3)
 
-
-
         self.__parseDoubleDiff()
+
+        return
 
     def __parseDoubleDiff(self):
         """
@@ -103,20 +111,19 @@ class GSMOutput:
             Angle  integrated distributions
             Energy integrated distributions
         """
+        __dataFlags = ("Double differential cross-section d2S/dTdO (mb/MeV/sr) of".strip().lower(),
+        "Angular distribution of produced fragments dS/dOm [mb/sr] for energy range(MeV)".strip().lower())
+        __dataLen = ( len(__dataFlags[0]), len(__dataFlags[1]) )
 
         # Print message:
         self.__write.message = "\t\tObtaining PISA double differential data..."
         self.__write.print(2, 3)
 
-
         # Sections: Double differential and energy integrated are in the same table (angle integrated in separate table)
         # Search through data for double differential and energy integrated data:
-        __dataFlags = ("Double differential cross-section d2S/dTdO (mb/MeV/sr) of".strip().lower(),
-        "Angular distribution of produced fragments dS/dOm [mb/sr] for energy range(MeV)".strip().lower())
-        __dataLen = ( len(__dataFlags[0]), len(__dataFlags[1]) )
         for i in range(0, self.__fileLen, 1):
-            dataLine = self.__fileData[i]
-            if ( dataLine[ : __dataLen[0] ] == __dataFlags[0] ):
+            dataLine = self.__fileData[i].strip().lower()
+            if ( dataLine.startswith(__dataFlags[0]) ):
                 # Found the flag
                 thisParticleType = dataLine[ __dataLen[0] : ].strip()
 
@@ -224,12 +231,12 @@ class GSMOutput:
                 # Add particle to the list:
                 self.__pisaData.addParticle(thisParticle)
 
+        return
 
     # For retrieving data:
     def getPISAData(self):
         """Returns the PISA object to the user"""
         return self.__pisaData
-
 
 
 class CEMOutput( GSMOutput ):

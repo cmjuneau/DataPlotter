@@ -34,6 +34,14 @@ __version__ = "1.0.0"
 class PlotGSMInputFile:
     """Reads an input file and sets values based on input specification."""
     # Input arguments:
+    __validParticles = ("n", "p", "d", "t", "he3", "he4", "he6", "li6", "li7", "li8",
+    "li9", "be7", "be9", "be10", "b9", "b10", "b11", "b12", "c11", "c12", "c13",
+    "c14", "z=7", "z=8", "z=9", "z=10", "z=11", "z=12", "z=13", "z=14")
+    __validLaTeXParticles = ("Neutron", "Proton", "Deuterium", "Tritium", "$^{3}$He", "$^{4}$He",
+    "$^{6}$He", "$^{6}$Li", "$^{7}$Li", "$^{8}$Li", "$^{9}$Li", "$^{7}$Be", "$^{9}$Be", "$^{10}$Be",
+    "$^{9}$B", "$^{10}$B", "$^{11}$B", "$^{12}$B", "$^{11}$C", "$^{12}$C", "$^{13}$C", "$^{14}$C",
+    "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si")
+    __numParticleNames = len(__validParticles)
     __fileCommentFlag = "#"
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
@@ -166,11 +174,13 @@ class PlotGSMInputFile:
 
         # Regarding what to plot:
         self.__particles = []
+        self.__latexParticleID = []
         self.__numParticles = 0
         self.__plotAngles = []
         self.__numAngles = 0
         self.__plotTypes = []
         self.__numPlotTypes = 0
+        self.__plotSeveralTypes = True
 
         # Misc information:
         self.__figDPI = 1200
@@ -183,15 +193,15 @@ class PlotGSMInputFile:
 
         # Apply X-axis label specific to the requested plot:
         if ( self.__xLabel == None ):
-            self.__xLabel = "Particle Energy [MeV]"
+            self.__xLabel = "No label given!"
 
         # Apply Y-axis label specific to the requested plot:
         if ( self.__yLabel == None ):
-            self.__yLabel = "Cross Section [mb/sr/MeV]"
+            self.__yLabel = "No label given!"
 
         # Apply plot title:
         if ( self.__plotTitle == None ):
-            self.__plotTitle = "Differential Cross Section"
+            self.__plotTitle = "No title given!"
 
 
         # Apply labels and plot title to the plot:
@@ -214,10 +224,80 @@ class PlotGSMInputFile:
         return
 
     def __plotLines(self):
-        """Plots all lines desired by the users"""
+        """Plots all lines desired by the user"""
+        __validPlotTypes = ("doubledif")
+        __numValidPlotTypes = len(__validPlotTypes)
+
+        # Ensure the the number of legend labels matches the sim. objects:
+        if ( self.__numSimLabels < self.__numSimObjects ):
+            self.__write.message = "Only %d simulation labels exist while %d files have been loaded." % (self.__numSimLabels, self.__numSimObjects)
+            self.__write.print(1, 2)
+            for i in range(self.__numSimLabels, self.__numSimObjects, 1):
+                self.__simLabels.append( self.__simLabels[i%self.__numSimLabels] )
+            self.__numSimLabels = len(self.__simLabels)
+
+        # Turn off multiple plots if they weren't specified:
+        if ( self.__numPlotTypes == 1 and self.__numParticles == 1 and self.__numAngles == 1 ):
+            self.__plotSeveralTypes = False
+            self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
+
+        for i in range(0, self.__numPlotTypes, 1):
+            # Validate plot type, otherwise continue:
+            validPlotType = False
+            for j in range(0, __numValidPlotTypes, 1):
+                if ( self.__plotTypes[i].startswith(__validPlotTypes[j]) ):
+                    validPlotType = True
+                    break
+            if ( not validPlotType ):
+                self.__write.message = "Invalid plot type specified: %s" % (self.__plotTypes[i])
+                self.__write.print(1, 2)
+                continue
+
+            # Apply plot:
+            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+                # Plot PISA double differential cross sections:
+                self.__write.message = "Plotting double differential PISA data..."
+                self.__write.print(2, 2)
+
+                # Determine X/Y/Title for plot labeling:
+                if ( self.__xLabel == None ):
+                    if ( self.__numParticles == 1 ):
+                        self.__xLabel = self.__latexParticleID[0]
+                    else:
+                        self.__xLabel = "Particle"
+                    self.__xLabel += " Energy [MeV]"
+                if ( self.__yLabel == None ):
+                    self.__yLabel = "Cross Section [mb/sr/MeV]"
+                if ( self.__plotTitle == None ):
+                    self.__plotTitle = "Double Differential Spectra"
+                    if ( self.__numParticles == 1 ):
+                        self.__plotTitle += " (" + self.__latexParticleID[0] + ")"
 
 
+                for j in range(0, self.__numParticles, 1):
+                    for k in range(0, self.__numAngles, 1):
+                        for l in range(0, self.__numSimObjects, 1):
+                            # Obtain histogram for each sim. object:
+                            thePISAData = self.__simObjects[l].getPISAData()
+                            if ( thePISAData == None ):
+                                self.__write.message = "No PISA data exists in the simulation file."
+                                self.__write.print(2, 2)
+                                continue
+                            theParticle = thePISAData.getParticle(self.__particles[j])
+                            if ( theParticle == None ):
+                                self.__write.message = "Data for the %s particle does not exist in the sim file." % (self.__particles[j])
+                                self.__write.print(2, 2)
+                                continue
+                            theHistogram = theParticle.getHistogram( self.__plotAngles[k] )
+                            if ( theHistogram == None ):
+                                self.__write.message = "No data exists for %s particles at %.2f degrees." % (self.__particles[j], self.__plotAngles[k])
+                                self.__write.print(2, 2)
+                                continue
+                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l])
 
+                        # Add plot type to distinguish:
+                        if ( self.__plotSeveralTypes ):
+                            self.__myPlot.addPlotType()
 
         # Legend information:
         self.__myPlot.setLegendPos( self.__legendPos, self.__legendPosX, self.__legendPosY )
@@ -227,7 +307,8 @@ class PlotGSMInputFile:
     def __applyAnnotations(self):
         """Applies the primary and all other annotations"""
 
-        self.__myPlot.setMainAnnotation( self.__mainAnnotation, self.__mainAnnotationPosX, self.__mainAnnotationPosY)
+        if ( not self.__mainAnnotation == None ):
+            self.__myPlot.setMainAnnotation( self.__mainAnnotation, self.__mainAnnotationPosX, self.__mainAnnotationPosY)
 
         # Check that all "other" annotations have a color and position, otherwise use default:
         self.__numOtherAnnotations = len(self.__otherAnnotation)
@@ -235,7 +316,7 @@ class PlotGSMInputFile:
         numYPos = len(self.__otherAnnotationY)
         numColor = len(self.__otherAnnotationColor)
         # (X positions)
-        if ( not numXPos == self.__numOtherAnnotations ):
+        if ( numXPos < self.__numOtherAnnotations ):
             # Append the default value to the list until the lengths match:
             self.__write.message = "The X-value for the last %d other annotations was not specified." % (self.__numOtherAnnotations-numXPos)
             self.__write.print(1, 2)
@@ -244,7 +325,7 @@ class PlotGSMInputFile:
             for i in range( numXPos, self.__numOtherAnnotations, 1):
                 self.__otherAnnotationX.append( self.__defaultAnnotatePos )
         # (Y positions)
-        if ( not numYPos == self.__numOtherAnnotations ):
+        if ( numYPos < self.__numOtherAnnotations ):
             # Append the default value to the list until the lengths match:
             self.__write.message = "The Y-value for the last %d other annotations was not specified." % (self.__numOtherAnnotations-numYPos)
             self.__write.print(1, 2)
@@ -253,7 +334,7 @@ class PlotGSMInputFile:
             for i in range( numYPos, self.__numOtherAnnotations, 1):
                 self.__otherAnnotationY.append( self.__defaultAnnotatePos )
         # (colors)
-        if ( not numColor == self.__numOtherAnnotations ):
+        if ( numColor < self.__numOtherAnnotations ):
             # Append the default color to the list until the lengths match:
             self.__write.message = "The color for the last %d other annotations was not specified." % (self.__numOtherAnnotations-numColor)
             self.__write.print(1, 2)
@@ -263,9 +344,10 @@ class PlotGSMInputFile:
                 self.__otherAnnotationColor.append( self.__defaultAnnotationColor )
 
         # Apply annotations:
-        for i in range(0, self.__numOtherAnnotations, 1):
-            self.__myPlot.addOtherAnnotation( self.__otherAnnotation[i],
-            self.__otherAnnotationX[i], self.__otherAnnotationY[i], self.__otherAnnotationColor[i])
+        if ( self.__numOtherAnnotations > 0 ):
+            for i in range(0, self.__numOtherAnnotations, 1):
+                self.__myPlot.addOtherAnnotation( self.__otherAnnotation[i],
+                self.__otherAnnotationX[i], self.__otherAnnotationY[i], self.__otherAnnotationColor[i])
 
         return
 
@@ -295,7 +377,7 @@ class PlotGSMInputFile:
         self.__write.print(2, 1)
 
         # Create new plot class object:
-        self.__myPlot = PlotClass()
+        self.__myPlot = PlotClass(True, self.__write)
 
         return
 
@@ -456,16 +538,13 @@ class PlotGSMInputFile:
         elif ( lineID == self.__dataArgs[1] ):
             # Load simulation data file:
             self.__simFiles.append( lineFlag.strip() )
-            self.__write.message = "Simulated data will read from file \"%s\"." % (self.__simFiles[self.__numSimFiles])
-            self.__write.print(2, 2)
+            self.__numSimFiles += 1
             if ( not fileModule.fileExists( self.__simFiles[ len(self.__simFiles)-1 ] ) ):
-                self.__write.message = "   File \"%s\" does not exist for reading simulation data from." % (self.__simFiles[self.__numSimFiles])
+                self.__write.message = "File \"%s\" does not exist for reading simulation data from." % (self.__simFiles[self.__numSimFiles])
                 self.__write.print(1, 2)
             else:
-                self.__write.message = "   Reading simulation data..."
-                self.__write.print(2, 4)
-                self.__simObjects.append( GSMOutput(self.__simFiles[self.__numSimFiles]) )
-                self.__numSimFiles += 1
+                self.__simObjects.append( GSMOutput(self.__simFiles[self.__numSimFiles-1], self.__write) )
+                self.__numSimObjects += 1
 
         elif ( lineID == self.__dataArgs[2] ):
             # Add simulation labels
@@ -494,9 +573,22 @@ class PlotGSMInputFile:
             newParticles = fileModule.parseLine( lineFlag.strip().lower() )
             if ( len(newParticles) > 0 ):
                 for i in range(0, len(newParticles), 1):
-                    self.__particles.append( newParticles[i] )
+                    # Ensure particle name is valid:
+                    validParticle = False
+                    particleIndx = 0
+                    for j in range(0, self.__numParticleNames, 1):
+                        if ( newParticles[i] == self.__validParticles[j] ):
+                            validParticle = True
+                            particleIndx = j
+                            break
 
-            self.__numParticles = len(self.__particles)
+                    if ( validParticle ):
+                        self.__particles.append( newParticles[i] )
+                        self.__latexParticleID.append( self.__validLaTeXParticles[particleIndx] )
+                        self.__numParticles += 1
+                    else:
+                        self.__write.message = "Invalid particle identifier found: %s" % (newParticles[i])
+                        self.__write.print(1, 2)
 
         elif ( lineID == self.__plotArgs[1] ):
             # Plot given; specify plot type:
@@ -504,8 +596,7 @@ class PlotGSMInputFile:
             if ( len(plotTypes) > 0 ):
                 for i in range(0, len(plotTypes), 1):
                     self.__plotTypes.append( plotTypes[i] )
-
-            self.__numPlotTypes = len(self.__plotTypes)
+                    self.__numPlotTypes += 1
 
         elif ( lineID == self.__plotArgs[2] ):
             # Plot given angle:
@@ -520,8 +611,7 @@ class PlotGSMInputFile:
 
             for i in range(0, len(angleFloat), 1):
                 self.__plotAngles.append( angleFloat[i] )
-
-            self.__numAngles = len(self.__plotAngles)
+                self.__numAngles += 1
 
         else:
             foundFlag = False
@@ -740,13 +830,13 @@ class PlotGSMInputFile:
     def createPlot(self):
         """Creates the plot and shows/saves it accordingly"""
 
+        # Plot all lines requested:
+        self.__plotLines()
+
         # Setup the plot's characteristics:
         self.__applyPlotLabels()
         self.__applyAxisDetails()
         self.__applyAnnotations()
-
-        # Plot all lines requested:
-        self.__plotLines()
 
         # Show and save plot:
         if ( self.__showPlot and self.__saveName == None ):

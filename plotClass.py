@@ -108,6 +108,7 @@ class _PlotLabeling(_BaseFigure):
     # Default annotation locations (note: defaults don't conflict with axes scales):
     __defaultXAnnotation = float(1.0E-4)
     __defaultYAnnotation = float(1.0E-4)
+    __colors = dict(plotlib.colors.BASE_COLORS, **plotlib.colors.CSS4_COLORS)
     __defaultAnnotationColor = "black"
     # Fonts (used for each class)
     __axisFont       = _defaultFontSize
@@ -158,7 +159,8 @@ class _PlotLabeling(_BaseFigure):
         self.__mainAnnotateY  = self.__defaultXAnnotation
         self.__mainAnnotateColor = self.__defaultAnnotationColor
         # (secondary annotations)
-        self.__boxOtherAnnotation  = False
+        self.__boxOtherAnnotation  = True
+        self.__useBoldFontOther = False
         self.__otherAnnotations    = []
         self.__otherAnnotateX      = []
         self.__otherAnnotateY      = []
@@ -212,7 +214,7 @@ class _PlotLabeling(_BaseFigure):
                 xy=(self.__mainAnnotateX, self.__mainAnnotateY),
                 xycoords="data", horizontalalignment="left", verticalalignment="bottom",
                 fontsize=self.__annotationFont, clip_on=True, color=self.__mainAnnotateColor,
-                bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.75) )
+                bbox=dict(boxstyle="round", fc="0.98", ec="0.75", alpha=0.75) )
             else:
                 thisAnnotation = self._BaseFigure__axis.annotate(theAnnotation,
                 xy=(self.__mainAnnotateX, self.__mainAnnotateY),
@@ -230,8 +232,7 @@ class _PlotLabeling(_BaseFigure):
 
                 theAnnotation = self.__otherAnnotations[i]
 
-                # Apply bold font:
-                if ( self.__useBoldFont ):
+                if ( self.__useBoldFontOther ):
                     theAnnotation = "{\\bf " + theAnnotation + "}"
 
                 if ( self.__boxOtherAnnotation ):
@@ -239,7 +240,7 @@ class _PlotLabeling(_BaseFigure):
                     xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
                     xycoords="data", horizontalalignment="left", verticalalignment="bottom",
                     fontsize=self.__annotationFont, clip_on=True, color=self.__otherAnnotateColor[i],
-                    bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.75) )
+                    bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.60) )
                 else:
                     thisAnnotation = self._BaseFigure__axis.annotate(theAnnotation,
                     xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
@@ -399,6 +400,13 @@ class _PlotLabeling(_BaseFigure):
 
         if ( newColor is None ):
             newColor = self.__defaultAnnotationColor
+        else:
+            if ( newColor not in self.__colors ):
+                self.__write.message = "Annotation color not supported: %s" % (newColor)
+                self.__write.print(1, 2)
+                newColor = self.__defaultAnnotationColor
+                self.__write.message = "   The color \"%s\" will be used instead." % (newColor)
+                self.__write.print(1, 2)
 
 
         # Set annotation variables:
@@ -562,7 +570,7 @@ class _AxisLimits(_BaseFigure):
 
         return lowVal, highVal
 
-    def __applyGrid(self, showGrid=True, whichAxis='both', gridColor='0.9', gridStyle=':'):
+    def __applyGrid(self, showGrid=True, whichAxis='major', gridColor='0.9', gridStyle=':'):
         """Sets the grid on the plot"""
         self._BaseFigure__axis.minorticks_on()
         self._BaseFigure__axis.grid(b=showGrid, which=whichAxis, color=gridColor, linestyle=gridStyle, alpha=0.9)
@@ -571,8 +579,8 @@ class _AxisLimits(_BaseFigure):
 
     def __applyScales(self):
         """Applies the scale for the X/Y axis"""
-        __minorXTicksLog = (2, 3, 4, 5, 6, 7, 8, 9)
-        __minorYTicksLog = (2, 3, 4, 5, 6, 7, 8, 9)
+        __minorXTicksLog = (2, 4, 6, 8, 0)
+        __minorYTicksLog = (2, 4, 6, 8, 0)
 
         # Apply X scale:
         if ( self.__xScale == self.__validScales[0] ):
@@ -849,8 +857,8 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
     # For line coloring and styles:
     __lineColors = [ 'blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
-    'gray', 'olive', 'cyan']
-    __lineStyles = ['--','-',':','-.']
+    'gray', 'olive', 'c', 'mediumaquamarine', 'y', 'rosybrown']
+    __lineStyles = ['-','--',':','-.']
     __numColors = len( __lineColors )
     __numLineStyles = len( __lineStyles )
 
@@ -934,7 +942,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
     def __addedLine(self, someLabel="No label was given"):
         """Checks to add a legend label and adds a plot line to the object"""
 
-        self.__addLegendLabel( myLabel )
+        self.__addLegendLabel( someLabel )
         self.__numPlotTypeLines += 1
         self.__totNumPlottedLines += 1
 
@@ -947,11 +955,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Ensure the numbers are a list/tuple of floats or ints:
         if ( not isinstance(someNumbers, (list, tuple)) ):
-            self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples of floats and ints."
-            self.__write.print(1, 2)
-            return lastIndex
-        if ( not isinstance(someNumbers, (int, float)) ):
-            self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples of floats and ints."
+            self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples."
             self.__write.print(1, 2)
             return lastIndex
 
@@ -971,9 +975,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         if ( self.__allowSeveralPlots ):
             colorFlag = self.__numPlotTypes
         else:
-            colorFlag = self.____totNumPlottedLines
+            colorFlag = self.__totNumPlottedLines
 
-        return self.__lineColors[ colorFlag % numColors ]
+        return self.__lineColors[ colorFlag % self.__numColors ]
 
     def __getLineStyle(self):
         """Returns the line style to be used (based on allowance of several plot types)"""
@@ -982,9 +986,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         if ( self.__allowSeveralPlots ):
             styleFlag = self.__numPlotTypeLines
         else:
-            styleFlag = 0
+            styleFlag = self.__totNumPlottedLines
 
-        return self.__lineStyles[ styleFlag % numLineStyles ]
+        return self.__lineStyles[ styleFlag % self.__numLineStyles ]
 
     def toggleSeveralPlots(self, allowSeveralPlots = True):
         """Toggles the allowance of printing several plots on the graph.
@@ -1011,7 +1015,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             self.__write.message = "   All data plotted herein will have the same color."
             self.__write.print(1, 3)
 
-        self.__allowManyPlots = allowSeveralPlots
+        self.__allowSeveralPlots = allowSeveralPlots
 
         return
 
@@ -1062,7 +1066,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             if ( yStart <= 0.00 ):
                 yStart = self.__defaultLegendY
 
-            self.__legendPos = __validLOC[2] # "upper left"
+            self.__legendPos = "upper left"
             self.__legendPosXY = (xStart, yStart)
 
         else:
@@ -1159,9 +1163,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         self.updateDynamicX( plottedBins )
         self.updateDynamicY( plottedValues )
 
-        if ( not useOwnHistPlot ):
+        if ( not self.__useOwnHistPlot ):
             # Plot histogram:
-            self.__axis.hist(plottedValues, bins=plottedBins, histtype='step', color=self.__getLineColor())
+            self._BaseFigure__axis.hist(plottedValues, bins=plottedBins, histtype='step', color=self.__getLineColor())
             self.__addedLine( myLabel )
 
         else:
@@ -1201,13 +1205,13 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             yScale = 1.00
 
         # Validate the types of the bins and values:
-        if ( not isinstance(myBins, list) ):
+        if ( not isinstance(xVals, list) ):
             self.__write.message = "The passed in histogram bins must be a list."
             self.__write.print(1, 2)
             self.__write.message = "   Unable to create histogram."
             self.__write.print(1, 2)
             return
-        if ( not isinstance(myValues, list) ):
+        if ( not isinstance(yVals, list) ):
             self.__write.message = "The passed in histogram values must be a list."
             self.__write.print(1, 2)
             self.__write.message = "   Unable to create histogram."
@@ -1234,15 +1238,15 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             yVals[i] += yShift
 
         # For multiple types, scale:
-        yScaleFactor = -self.__numPlotTypes * typeExpScaling
+        yScaleFactor = -self.__numPlotTypes * self.__typeExpScaling
         yScale = yScale * pow(10, yScaleFactor)
-        if ( self.__numTypes > 0 ):
+        if ( self.__numPlotTypes > 0 ):
             self.__write.message = "Sim. data for \"%s\" is being scaled by 10^(%.1f) for clarity." % (myLabel, yScaleFactor)
             self.__write.print(2, 2)
 
         # Obtain x/y set for as many pairs between X/Y coords:
         lastIndex = self.__findLastNonZeroValue( yVals )
-        numPairs = min( len(xVals), len(yVals), lastValueIndx )
+        numPairs = min( len(xVals), len(yVals), lastIndex )
         xCoord = []
         yCoord = []
         if ( numPairs <= 0 ):
@@ -1262,10 +1266,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # X/Y values are all valid; create line:
         if ( self._AxisLimits__yScale == self._AxisLimits__validScales[0] ):
-            self.__axis.plot( xCoord, yCoord, linestyle=thisLineStyle,
+            self._BaseFigure__axis.plot( xCoord, yCoord, linestyle=thisLineStyle,
             color=thisLineColor, alpha=self.__opacity )
         else:
-            self.__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
+            self._BaseFigure__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
             color=thisLineColor, alpha=self.__opacity )
 
         # Add legend entry for first few lines (w/ multiple plots)
@@ -1283,28 +1287,17 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         return
 
-    def showCurrentPlot(self, pauseTime=None):
+    def showCurrentPlot(self):
         """Shows the plot"""
 
         # Set plot details:
         self.finalizePlot()
 
-        if ( not pauseTime == None ):
-            try:
-                pauseTime = float(pauseTime)
-            except:
-                self.__write.message = "Could not convert pause time for showing plot to float: ", pauseTime
-                self.__write.print(1, 2)
-                self.__write.message = "   Waiting for user input instead."
-                self.__writeprint(1, 2)
-                pauseTime = None
-
         # plt.ion()
+        self.__write.message = "Showing plot..."
+        self.__write.print(2, 2)
         plt.show()
-        if ( pauseTime == None ):
-            someInput = input("<Press ENTER to continue>")
-        else:
-            time.sleep( pauseTime )
+        time.sleep( 0.00 )
 
         return
 
@@ -1336,6 +1329,6 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         plt.savefig(figName, bbox_inches=figBBox, pad_inches=figPad, dpi = figDPI)
 
         if ( showPlot ):
-            self.showCurrentPlot(1)
+            self.showCurrentPlot()
 
         return

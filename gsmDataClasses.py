@@ -64,15 +64,6 @@ numHistTypes = len(histType)
 
 class Histogram:
     """Stores particle data in histogram form"""
-    __write = Print()
-    # "Metadata" for histogram:
-    __angle = 0
-    __type = None   # Not currently used for verification during queries
-    # Data for histogram:
-    __dataPoints = []
-    __numDataPoints = 0
-    __binValues  = []
-    __numBins = 0
 
     def __init__(self, type, angle, bins, values, newPrint = Print() ):
         """Constructor for class"""
@@ -116,7 +107,6 @@ class Histogram:
                 self.__angle += 360
             elif ( self.__angle >= 360 ):
                 self.__angle -= 360
-
 
         # Verify that bins and values are lists:
         validBins   = isinstance(bins,   list)
@@ -185,6 +175,7 @@ class Histogram:
             self.__dataPoints.append( values[i] )
         self.__numDataPoints = len( self.__dataPoints )
 
+        return
 
     def appendDataPoint(self, newDataPoint, binValue):
         """Appends a data point to the end of the histogram"""
@@ -208,6 +199,8 @@ class Histogram:
         self.__numDataPoints += 1
         self.__binValues.append( binValue )
         self.__numBins += 1
+
+        return
 
     def getDataPoints(self):
         """Returns the data points for the histogram object"""
@@ -238,10 +231,6 @@ class ParticlePISAData:
     """Class that stores PISA data for each particle (many histogram data points)"""
     # Data contained here includes all double differential cross sections,
     # angle integrated cross sections, and energy integrated cross sections.
-    __write        = Print()
-    __particleName = None
-    __histData     = []
-    __numHistograms = 0
 
     def __init__(self, particleName, newPrint = Print() ):
         """Constructor for particle PISA data"""
@@ -263,6 +252,8 @@ class ParticlePISAData:
         else:
             self.__write.message = "Invalid particle ID (%s) used for ParticlePISAData construction." % (particleName)
             self.__write.print(1, 2)
+
+        return
 
     def __validateHistogramIndex(self, i):
         """Checks for valid index in histogram array"""
@@ -286,6 +277,8 @@ class ParticlePISAData:
             self.__write.message = "Incorrect parameter instance cannot be added (should be histogram)"
             self.__write.print(1, 2)
 
+        return
+
     def getHistogram(self, someAngle):
         """Returns a histogram to the user with the corresponding label"""
         # Check if any histograms exist:
@@ -294,17 +287,17 @@ class ParticlePISAData:
             self.__write.print(1, 2)
             return None
 
-
         # Migrate angle to float:
-        try:
-            someAngle = float(someAngle)
-        except:
-            self.__write.message = "Invalid angle type passed in. Should be numerical; assuming value of 0."
-            self.__write.print(1, 2)
-            someAngle = 0.0
+        if ( not isinstance(someAngle, (float, int)) ):
+            try:
+                someAngle = float(someAngle)
+            except:
+                self.__write.message = "Invalid angle type passed in. Should be numerical; assuming value of 0."
+                self.__write.print(1, 2)
+                someAngle = 0.0
 
         # Return histogram (for string, int)
-        if ( isinstance(someAngle, float) ):
+        if ( isinstance(someAngle, (float, int)) ):
             # Look for histogram matching the passed in label:
             foundLabel = False
             associatedHist = 0
@@ -332,6 +325,8 @@ class ParticlePISAData:
             self.__write.print(1, 2)
             return None
 
+        return None
+
 
 class DoubleDiffPISA:
     """Data for when the PISA card is used in CEM and GSM"""
@@ -345,15 +340,14 @@ class DoubleDiffPISA:
     # ---Up to 10 angles can be used
     # ---Energy bins [histogram]
     # For this, the values are needed (n values) in addition to the bins (n+1 values).
-    __write = Print()
-    __particleData = []   # Contains the particle histogram data
-    __numParticles = 0
 
     def __init__(self, newPrint = Print() ):
         """Class constructor"""
         self.__write = newPrint
         self.__particleData = []
         self.__numParticles = 0
+
+        return
 
     def addParticle(self, newParticleHist):
         """Adds a particle's histogram data to the class"""
@@ -362,7 +356,9 @@ class DoubleDiffPISA:
             self.__numParticles += 1
         else:
             self.__write.message = "Can only add particle's PISA histogram sets."
-            self.__write.pritn(1, 2)
+            self.__write.print(1, 2)
+
+        return
 
     def __verifyParticleExists(self, i):
         """Verifies that the particle exists in the array"""
@@ -433,6 +429,8 @@ class DoubleDiffPISA:
             self.__write.message = "Invalid parameter type passed in for obtaining particle PISA data (%s)" % ( str(particleID) )
             self.__write.print(1, 2)
             return None
+
+        return None
 
     def getNumParticles(self):
         """Returns the number of particles that exist in the object"""
