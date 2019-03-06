@@ -1,25 +1,116 @@
-c ------------------------------------------------------------------
-comment Compares CEM, GSM versions, LAQGSM, and data graphically.
-particle He4
-plot dd
-read pU.dd.txt
-data He4at90-2.dat
-angle 10 30 90 120 30
-annotate $^{238}U$ (5.5 GeV $p$, X)
-c annotateX 0.51
-c annotateY 0.94
-save He4Plot-pU30.png
-dpi 1200
-xscale linear
-yscale log
+# =====================================
+# NEW PLOT
+# =====================================
+comment Some comment about the plot.
+#
+c Data Arguments:
+c ----------------------------------
+# data someDataFile.dat
+sim pU.c.out
+sim pU.g.out
+simLabel CEM GSM
+#
+c Plot Type Arguments:
+c ----------------------------------
+particle n he4
+plot doubledifferential
+angle 30 60 90
+#
+c Annotation Arguments:
+c ----------------------------------
+annotate Some Random Annotation
+annotatePos 50 1.0E-02
+otherAnnotate Some other random annotation
+otherAnnotatePos 20 3.0E-5
+otherAnnotate Another random annotation
+otherAnnotatePos 1.0E-5 3.0E-5
+otherAnnotateColor green blue
+#
+c Misc. Arguments:
+c ----------------------------------
+save zTemp
+dpi 300
+show True
+override True
+#
+c Axis Limits:
+c ----------------------------------
+# xscale linear
+# yscale log
+# xrange 0 150
+# yrange 1.0E-6 1.0E+2
+#
+c Figure Labels:
+c ----------------------------------
+# xlabel Some X-Axis Label
+# ylabel Some Y-Axis Label
+# title  Some Plot Title
+# legend co 0.9 1.0
+#
+c End Arguments:
+c ----------------------------------
+end
+# quit
+# stop
+# done
+# new
 
 
-xrange 0 150
-yrange 1.0E-6 1.0E+2
-annotateLine particle 0 0.
-annotateLine none 0 0.
-annotateLine angle 0 0.
-annotateLine angle 0 0.
-scaleFactor 2
-display none
-end plot
+
+
+
+
+
+# =====================================
+# NEW PLOT
+# =====================================
+# comment Some comment about the plot.
+#
+c Data Arguments:
+c ----------------------------------
+# data someDataFile.dat
+# sim someSimulationDataFile.out
+# simLabel As Many Labels as There Are sim Files Loaded
+#
+c Plot Type Arguments:
+c ----------------------------------
+# particle n he4
+# plot double differential
+# angle 30 60 90
+#
+c Annotation Arguments:
+c ----------------------------------
+# annotate Some Random Annotation
+# annotatePos X Y
+# otherAnnotate Some other random annotation
+# otherAnnotatePos X Y
+# otherAnnotateColor black
+#
+c Misc. Arguments:
+c ----------------------------------
+# save someSaveFileName.png
+# dpi 1200
+# show False
+# override True
+#
+c Axis Limits:
+c ----------------------------------
+# xscale linear
+# yscale log
+# xrange 0 150
+# yrange 1.0E-6 1.0E+2
+#
+c Figure Labels:
+c ----------------------------------
+# xlabel Some X-Axis Label
+# ylabel Some Y-Axis Label
+# title  Some Plot Title
+# legend (text OR "co" w/ XY usage) (X Y)
+#
+c End Arguments:
+c ----------------------------------
+# end
+# quit
+# stop
+# done
+# new
