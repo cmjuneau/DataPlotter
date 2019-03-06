@@ -2,6 +2,7 @@ The various python scripts contained here are meant to provide users easy to ref
 The main purpose for creating these modules is to plot event generator data (CEM, GSM, and LAQGSM) against experimental data.
 
 >The general python modules that can be multi-purpose include the following:
+
 *The printClass object is used to simply control printing of various messages as they are encountered. All message printing should be filtered through this function for consistency.
 *The fileModule.py file contains various methods dealing with verifying the existence of files, the length of files, deleting/creating files, etc.
 *The plotClass.py file contains various classes that simply interface the matplotlib utilities and add protection against user error. Multiple inheritence is used in the plot class, where users/clients only need to access the PlotClass object for most plotting needs.
