@@ -570,33 +570,32 @@ class _AxisLimits(_BaseFigure):
 
         return lowVal, highVal
 
-    def __applyGrid(self, showGrid=True, whichAxis='major', gridColor='0.9', gridStyle=':'):
+    def __applyGrid(self, showGrid=True, whichAxis='both', gridColor='0.9', gridStyle=':'):
         """Sets the grid on the plot"""
-        self._BaseFigure__axis.minorticks_on()
-        self._BaseFigure__axis.grid(b=showGrid, which=whichAxis, color=gridColor, linestyle=gridStyle, alpha=0.9)
+        # self._BaseFigure__axis.minorticks_on()
+        if ( showGrid ):
+            self._BaseFigure__axis.grid(b=showGrid, which=whichAxis, color=gridColor, linestyle=gridStyle, alpha=0.9)
 
         return
 
     def __applyScales(self):
         """Applies the scale for the X/Y axis"""
-        __minorXTicksLog = (2, 4, 6, 8, 0)
-        __minorYTicksLog = (2, 4, 6, 8, 0)
 
         # Apply X scale:
         if ( self.__xScale == self.__validScales[0] ):
             self._BaseFigure__axis.set_xscale(self.__xScale)
         elif ( self.__xScale == self.__validScales[1] ):
-            self._BaseFigure__axis.set_xscale(self.__xScale, nonposx='clip', subsx=__minorXTicksLog)
+            self._BaseFigure__axis.set_xscale(self.__xScale, nonposx='clip')
         elif ( self.__xScale == self.__validScales[2] ):
-            self._BaseFigure__axis.set_xscale(self.__xScale, subsx=__minorXTicksLog)
+            self._BaseFigure__axis.set_xscale(self.__xScale)
 
         # Apply y scale:
         if ( self.__yScale == self.__validScales[0] ):
             self._BaseFigure__axis.set_yscale(self.__yScale)
         elif ( self.__yScale == self.__validScales[1] ):
-            self._BaseFigure__axis.set_yscale(self.__yScale, nonposy='clip', subsy=__minorYTicksLog)
+            self._BaseFigure__axis.set_yscale(self.__yScale, nonposy='clip')
         elif ( self.__yScale == self.__validScales[2] ):
-            self._BaseFigure__axis.set_yscale(self.__yScale, subsy=__minorYTicksLog)
+            self._BaseFigure__axis.set_yscale(self.__yScale)
 
         return
 

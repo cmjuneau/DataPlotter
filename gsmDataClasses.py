@@ -301,6 +301,13 @@ class ParticlePISAData:
             # Look for histogram matching the passed in label:
             foundLabel = False
             associatedHist = 0
+            # Reduce angle within range [0, 360)
+            if ( someAngle < 0 ):
+                someAngle += 360
+            elif ( someAngle >= 360 ):
+                if ( (not someAngle == 361) and (not someAngle == 362) ):
+                    someAngle -= 360
+
             for i in range(0, self.__numHistograms, 1):
                 if ( self.__histData[i].getAngle() == someAngle ):
                     foundLabel = True
@@ -316,12 +323,12 @@ class ParticlePISAData:
                 someVals = self.__histData[ associatedHist ].getBinValues()
                 return self.__histData[ associatedHist ]
             else:
-                self.__write.message = "No histogram for particle \"%s\" with matching angle (%.2f) found." % (self.__particleName, someLabel)
+                self.__write.message = "No histogram for particle \"%s\" with matching angle (%.2f) found." % (self.__particleName, someAngle)
                 self.__write.print(2, 4)
                 return None
         else:
             # Invalid label, warn user
-            self.__write.message = "Invalid label type passed in (" + str(someLabel) + "), should be 'float'. Cannot return PISA histogram object."
+            self.__write.message = "Invalid label type passed in (" + str(someAngle) + "), should be 'float'. Cannot return PISA histogram object."
             self.__write.print(1, 2)
             return None
 
@@ -346,6 +353,40 @@ class DoubleDiffPISA:
         self.__write = newPrint
         self.__particleData = []
         self.__numParticles = 0
+
+        return
+
+    def addParticleHistogram(self, particleID, newHistogram):
+        """Adds a new histogram to the specified particle ID"""
+        # Verify valid particleID was specified:
+        validParticleID = False
+        for i in range(0, numParticleTypes, 1):
+            if ( particleID == particleTypes[i] ):
+                validParticleID = True
+                break
+        if ( not validParticleID ):
+            self.__write.message = "An invalid particle ID (%s) was specified when adding a histogram." % particleID
+            self.__write.print(1, 2)
+            self.__write.message = "   The histogram will not be added."
+            self.__write.print(1, 2)
+            return
+
+        # See if particle exists in current set of particles:
+        particleDataExists = False
+        particleIndx = -1
+        if ( self.__numParticles > 0 ):
+            for i in range(0, self.__numParticles, 1):
+                if ( particleID == self.__particleData[i].getParticleName() ):
+                    particleDataExists = True
+                    particleIndx = i
+                    break
+
+        # Add the histogram to the particle (or create new particle and add histogram)
+        if ( particleDataExists ):
+            self.__particleData[particleIndx].addHistogram( newHistogram )
+        else:
+            self.addParticle( ParticlePISAData(particleID, self.__write) )
+            self.addParticleHistogram( particleID, newHistogram )
 
         return
 
@@ -402,7 +443,7 @@ class DoubleDiffPISA:
 
             # Now find if particle exists in data set:
             foundParticle = False
-            particleIndx = 0
+            particleIndx = -1
             for i in range(0, self.__numParticles, 1):
                 if ( self.__particleData[ i ].getParticleName() == particleID ):
                     foundParticle = True
@@ -431,6 +472,15 @@ class DoubleDiffPISA:
             return None
 
         return None
+
+    def getParticleHistogram(self, particleID, someAngle):
+        """Returns a histogram matching the particle ID and the angle specified"""
+        theParticleObj = self.getParticle( particleID )
+        if ( theParticleObj == None ):
+            theHistogram = None
+        else:
+            theHistogram = theParticleObj.getHistogram( someAngle )
+        return theHistogram
 
     def getNumParticles(self):
         """Returns the number of particles that exist in the object"""

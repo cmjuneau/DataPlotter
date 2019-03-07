@@ -6,19 +6,19 @@ comment Some comment about the plot.
 c Data Arguments:
 c ----------------------------------
 # data someDataFile.dat
-sim pU.c.out
 sim pU.g.out
-simLabel CEM GSM
+sim pU.c.out
+simLabel GSM CEM
 #
 c Plot Type Arguments:
 c ----------------------------------
-plot doubledifferential
-particle z=14
-angle 45
+plot energyint
+particle c13
+# angle 45 361
 #
 c Annotation Arguments:
 c ----------------------------------
-annotate $^{238}$U (5.5~GeV p, X) Si
+annotate $^{238}$U (5.5~GeV p, X) $^{13}$C
 annotatePos 10 2.0E-02
 # otherAnnotate neutrons
 # otherAnnotatePos 110 1.0E+01
@@ -28,7 +28,7 @@ otherAnnotateColor blue
 #
 c Misc. Arguments:
 c ----------------------------------
-save zTemp
+# save zTemp
 dpi 1200
 show True
 override True
@@ -37,9 +37,8 @@ c Axis Limits:
 c ----------------------------------
 # xscale linear
 # yscale log
-# xrange 0 150
-# yrange 3.0E-01 1.0E+02
-#
+# xrange 0 180
+# yrange 1.0E-01 3.0E-01
 c Figure Labels:
 c ----------------------------------
 # xlabel Some X-Axis Label

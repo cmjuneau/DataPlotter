@@ -65,32 +65,6 @@ if ( testingModule.letsTest ):
 # Create input file class:
 inputObj = PlotGSMInputFile("pU.plot.inp")
 
-exit()
-
-
-
-desiredParticles = ["He4"]
-desiredAngles = [10, 30, 90, 120, 30]
-for i in range(0, len(desiredParticles), 1):
-    for j in range(0, len(desiredAngles), 1):
-        for k in range(0, len(simData), 1):
-            thisPISAData = simData[k].getPISAData()
-            thisParticle = thisPISAData.getParticle(desiredParticles[i])
-            if ( not thisParticle == None ):
-                thisHistogram = thisParticle.getHistogram(desiredAngles[j])
-                if ( not thisHistogram == None ):
-                    # Add histogram:
-                    myPlot.addHistogram(thisHistogram.getBinValues(), thisHistogram.getDataPoints(), dataLabel[k])
-        # End of output loop:
-        typeLabel = str(desiredAngles[j]) + " degrees"
-        myPlot.annotateLine( typeLabel )
-        myPlot.addType()
-    # End of angle loop:
-# End of particle loop:
-
-
-
-myPlot.savePlot( figName )
 
 ################################################################################
 exit()

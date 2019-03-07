@@ -15,16 +15,13 @@ Each output type has separate sub-classes for each data type, each with a print 
 # IMPORTS:
 import sys
 
-
 # MODULES:
 from printClass import Print
 from fileModule import readFile, parseLine, fileExists
 import gsmDataClasses as gsmData
 
-
 # VERSION Number:
 __version__ = "1.0.0"
-
 
 
 # Class defaults:
@@ -37,6 +34,8 @@ numParticleTypes = len( particleTypes )
 
 class GSMOutput:
     """GSM Output Class"""
+    __pisaAngleIntFlag = 361
+    __pisaEnergyIntFlag = 362
 
     def __init__(self, fileName = None, newPrint = Print() ):
         """Constructor for the GSM Output class"""
@@ -144,9 +143,9 @@ class GSMOutput:
                 myParticleAngles = parsedData
                 for j in range(0, len(myParticleAngles)-1, 1):
                     myParticleAngles[j] = float(myParticleAngles[j])
-                myParticleAngles[ j+1 ] = 361
+                myParticleAngles[ j+1 ] = self.__pisaAngleIntFlag
                 myParticleTypes = (len(myParticleAngles)-1)*["Double Differential"]
-                myParticleTypes.append( "Angle integrated" )
+                myParticleTypes.append( "Angle Integrated" )
 
                 # Now obtain bin bounds and data (the particleID, types, and labels are created)
                 numSets = len(myParticleTypes)
@@ -160,11 +159,9 @@ class GSMOutput:
                     i += 1
                     parsedLine = parseLine ( self.__fileData [ i ] )
 
-
                     # Check for exit:
                     if ( len(parsedLine) == 0 or parsedLine[0] == "energ." ):
                         break
-
 
                     # Remove the "-" from the first entry:
                     firstEntry = parsedLine[0]
@@ -174,7 +171,6 @@ class GSMOutput:
                     else:
                         # No space between bin start end end; append bin end to middle of list
                         parsedLine = parseLine( firstEntry, "-") + parsedLine[1 : ]
-
 
                     # Convert parsed line to floats:
                     for j in range(0, len(parsedLine), 1):
@@ -210,7 +206,7 @@ class GSMOutput:
                 # Reached end of data table; no more data (construct particle histograms)
                 # Create particle object:
                 self.__write.message = "\t\t\tStoring PISA histogram data for particle \"%s\"..." % (particleID)
-                self.__write.print(2, 3)
+                self.__write.print(2, 5)
                 thisParticle = gsmData.ParticlePISAData(particleID, self.__write)
 
                 # Create and append histogram data:
@@ -218,18 +214,92 @@ class GSMOutput:
                     newHistogram = gsmData.Histogram(myParticleTypes[j], myParticleAngles[j], myBins, myValues[j], self.__write)
                     thisParticle.addHistogram( newHistogram )
 
-                    # Testing:
-                    if ( particleID == "be9" and myParticleAngles[j] == 90 and False ):
-                        print("Data contains %d bins (%d values)" % (len(myBins), len(myValues[j])) )
-                        print("Histogram bins are %d (%d)." % (
-                        len(thisParticle.getHistogram(myParticleAngles[j]).getBinValues()),
-                        thisParticle.getHistogram(myParticleAngles[j]).getNumBins()) )
-                        print("Histogram values are %d (%d)." % (
-                        len(thisParticle.getHistogram(myParticleAngles[j]).getDataPoints()),
-                        thisParticle.getHistogram(myParticleAngles[j]).getNumDataPoints()) )
-
                 # Add particle to the list:
                 self.__pisaData.addParticle(thisParticle)
+
+            elif ( dataLine.startswith(__dataFlags[1]) ):
+                # Advance 2 lines to where the data is:
+                i += 2
+                dataLine = self.__fileData[i].strip().lower()
+
+                # Obtain particle identifiers:
+                parsedLine = parseLine( dataLine )
+                particleID = []
+                for j in range(1, len(parsedLine), 1):
+                    particleID.append( parsedLine[j] )
+
+                # Obtain data:
+                numSets = len(particleID)
+                myBins = []
+                numBins = 0
+                myValues = [ [] for j in range(0, numSets, 1) ]
+                numValues = 0
+                while( True ):
+
+                    # Obtain line's data:
+                    i += 1
+                    dataLine = self.__fileData[i].strip().lower()
+
+                    # Exit if end of set was found:
+                    if ( dataLine.startswith("int. x sec") or dataLine.startswith("int. xsec") ):
+                        break
+
+                    # Get bin bounds:
+                    lowerBin = dataLine[ : dataLine.find("-") ]
+                    parsedLine = parseLine( dataLine[ dataLine.find("-") + 1 : ] )
+                    upperBin = parsedLine[0]
+                    del parsedLine[0]
+
+                    # Convert all values to floats:
+                    try:
+                        lowerBin = float(lowerBin)
+                    except:
+                        self.__write.message = "Unable to convert lower bin (%s) to a float for angular distributions." % lowerBin
+                        self.__write.print(1, 2)
+                        lowerBin = 0
+                    try:
+                        upperBin = float(upperBin)
+                    except:
+                        self.__write.message = "Unable to convert upper bin (%s) to a float for angular distributions." % upperBin
+                        self.__write.print(1, 2)
+                        upperBin = lowerBin
+                    for j in range(0, len(parsedLine), 1):
+                        try:
+                            parsedLine[j] = float( parsedLine[j] )
+                        except:
+                            self.__write.message = "Unable to convert histogram value (%s) to a float for angular distributions." % (parsedLine[j])
+                            self.__write.print(1, 2)
+
+                    # Add a bin:
+                    if ( numBins == 0 ):
+                        # Set base bin:
+                        myBins.append( lowerBin )
+                    else:
+                        # Verify bin start matches last bin's end, if not then create empty bin here
+                        if ( not lowerBin == myBins[ numBins ] ):
+                            myBins.append( lowerBin )
+                            numBins += 1
+                            # Set bin value to 0 for all bins:
+                            for j in range(0, numSets, 1):
+                                myValues[j].append( 0.00 )   # Set bin value to 0
+                            numValues += 1
+                    myBins.append( upperBin )
+                    numBins += 1
+
+                    # Set the value for the bin:
+                    for j in range(0, min(numSets, len(parsedLine)), 1):
+                        myValues[j].append( parsedLine[j] )
+                    numValues += 1
+
+                # Now apply histograms and add to existing particles:
+                for j in range(0, numSets, 1):
+                    self.__write.message = "\t\t\tStoring PISA energy integrated data for particle \"%s\"..." % (particleID[j])
+                    self.__write.print(2, 5)
+
+                    # Create histogram object, add to PISA data object:
+                    theHistogram = gsmData.Histogram("energy integrated", self.__pisaEnergyIntFlag, myBins, myValues[j], self.__write)
+                    self.__pisaData.addParticleHistogram(particleID[j], theHistogram)
+
 
         return
 
@@ -237,6 +307,14 @@ class GSMOutput:
     def getPISAData(self):
         """Returns the PISA object to the user"""
         return self.__pisaData
+
+    def getPISAParticle(self, particleID):
+        """Returns the particle's PISA data"""
+        return ( self.__pisaData.getParticle(particleID) )
+
+    def getPISAParticleHistogram(self, particleID, someAngle):
+        """Returns the specific histogram associated with the particle's PISA data"""
+        return ( self.__pisaData.getParticleHistogram(particleID, someAngle) )
 
 
 class CEMOutput( GSMOutput ):

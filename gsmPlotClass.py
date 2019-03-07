@@ -225,7 +225,8 @@ class PlotGSMInputFile:
 
     def __plotLines(self):
         """Plots all lines desired by the user"""
-        __validPlotTypes = ("doubledif")
+        __validPlotTypes = ("doubledif", "angleint", "energyint")
+        __plotTypeName = ("double differential", "angle integrated", "energy integrated")
         __numValidPlotTypes = len(__validPlotTypes)
 
         # Ensure the the number of legend labels matches the sim. objects:
@@ -237,26 +238,49 @@ class PlotGSMInputFile:
             self.__numSimLabels = len(self.__simLabels)
 
         # Turn off multiple plots if they weren't specified:
-        if ( self.__numPlotTypes == 1 and self.__numParticles == 1 and self.__numAngles == 1 ):
+        if ( self.__numPlotTypes <= 1 and self.__numParticles <= 1 and self.__numAngles <= 1 ):
             self.__plotSeveralTypes = False
             self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
 
         for i in range(0, self.__numPlotTypes, 1):
             # Validate plot type, otherwise continue:
             validPlotType = False
+            plotTypeIndx = -1
             for j in range(0, __numValidPlotTypes, 1):
                 if ( self.__plotTypes[i].startswith(__validPlotTypes[j]) ):
                     validPlotType = True
+                    plotTypeIndx = j
                     break
             if ( not validPlotType ):
                 self.__write.message = "Invalid plot type specified: %s" % (self.__plotTypes[i])
                 self.__write.print(1, 2)
                 continue
 
+
+            # Set angle/plot type for PISA angle/energy intergrated data (stored at angle=361, 362, respectively)
+            if ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
+                # Set to doublediff and apply angle
+                if ( self.__numAngles > 0 ):
+                    self.__write.message = "Unable to plot angles with %s spectra. Clearing all angles..." % (__plotTypeName[plotTypeIndx])
+                    self.__write.print(1, 2)
+                self.__plotAngles = []
+                self.__plotAngles.append( 361 )
+                self.__numAngles = len( self.__plotAngles )
+            elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
+                # Set to doublediff and apply angle
+                if ( self.__numAngles > 0 ):
+                    self.__write.message = "Unable to plot angles with %s spectra. Clearing all angles..." % (__plotTypeName[plotTypeIndx])
+                    self.__write.print(1, 2)
+                self.__plotAngles = []
+                self.__plotAngles.append( 362 )
+                self.__numAngles = len( self.__plotAngles )
+
             # Apply plot:
-            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) or
+            self.__plotTypes[i].startswith(__validPlotTypes[1]) or
+            self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
                 # Plot PISA double differential cross sections:
-                self.__write.message = "Plotting double differential PISA data..."
+                self.__write.message = "Plotting %s PISA data..." % (__plotTypeName[plotTypeIndx])
                 self.__write.print(2, 2)
 
                 # Determine X/Y/Title for plot labeling:
@@ -267,12 +291,26 @@ class PlotGSMInputFile:
                         self.__xLabel = "Particle"
                     self.__xLabel += " Energy [MeV]"
                 if ( self.__yLabel == None ):
-                    self.__yLabel = "Cross Section [mb/sr/MeV]"
+                    self.__yLabel = "Cross Section"
+                    if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+                        self.__yLabel += " [mb/sr/MeV]"
+                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
+                        self.__yLabel += " [mb/MeV]"
+                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
+                        self.__yLabel += " [mb/sr]"
                 if ( self.__plotTitle == None ):
-                    self.__plotTitle = "Double Differential Spectra"
+                    if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+                        self.__plotTitle = "Double Differential Spectra"
+                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
+                        self.__plotTitle = "Angle Integrated Spectra"
+                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
+                        self.__plotTitle = "Energy Integrated Spectra"
                     if ( self.__numParticles == 1 ):
-                        self.__plotTitle += " (" + self.__latexParticleID[0] + ")"
-
+                        self.__plotTitle += " (" + self.__latexParticleID[0]
+                    if ( self.__numAngles == 1 and self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+                        self.__plotTitle += " at %.0f$^{\\circ}$)" % (self.__plotAngles[0])
+                    else:
+                        self.__plotTitle += ")"
 
                 for j in range(0, self.__numParticles, 1):
                     for k in range(0, self.__numAngles, 1):
@@ -610,6 +648,11 @@ class PlotGSMInputFile:
                     self.__write.print(1, 2)
 
             for i in range(0, len(angleFloat), 1):
+                if ( angleFloat[i] < 0 ):
+                    angleFloat[i] += 360
+                    print("Is there a better way to do this?")
+                elif ( angleFloat[i] >= 360 ):
+                    angleFloat[i] = angleFloat[i] % 360
                 self.__plotAngles.append( angleFloat[i] )
                 self.__numAngles += 1
 
