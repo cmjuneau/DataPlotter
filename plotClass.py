@@ -784,7 +784,10 @@ class _AxisLimits(_BaseFigure):
         if ( self.__xScale == self.__validScales[0] ):
             self.__minDynamicX = min( self.__minDynamicX, tempMin)
         else:
-            self.__minDynamicX = min( self.__minDynamicX, temp2Min)
+            appliedMin = tempMin
+            if ( appliedMin <= 0.00 ):
+                appliedMin = temp2Min
+            self.__minDynamicX = min( self.__minDynamicY, appliedMin)
 
         return
 
@@ -815,7 +818,10 @@ class _AxisLimits(_BaseFigure):
         if ( self.__yScale == self.__validScales[0] ):
             self.__minDynamicY = min( self.__minDynamicY, tempMin)
         else:
-            self.__minDynamicY = min( self.__minDynamicY, temp2Min)
+            appliedMin = tempMin
+            if ( appliedMin <= 0.00 ):
+                appliedMin = temp2Min
+            self.__minDynamicY = min( self.__minDynamicY, appliedMin)
 
         return
 
@@ -855,9 +861,13 @@ class PlotClass(_PlotLabeling, _AxisLimits):
     __defaultAllowSeveralPlots = True
 
     # For line coloring and styles:
-    __lineColors = [ 'blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
-    'gray', 'olive', 'c', 'mediumaquamarine', 'y', 'rosybrown']
-    __lineStyles = ['-','--',':','-.']
+    __lineColors = ('blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
+    'olive', 'c', 'mediumaquamarine', 'y', 'rosybrown')
+    __expDataColor = ("gray")
+    __lineStyles = ('-','--',':','-.')
+    __markers = ("v", "8", "s", "p", "*", "h", "D", "o", "^")
+    __numMarkers = len(__markers)
+    __myMarkerIndx = 0
     __numColors = len( __lineColors )
     __numLineStyles = len( __lineStyles )
 
@@ -905,12 +915,11 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
     def __applyLegend(self):
         """Applies the legend to the plot"""
-
+        print(self.__legendEntries)
         if ( self.__legendPosXY == None ):
             self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos)
         else:
             self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos, bbox_to_anchor=self.__legendPosXY)
-
 
         return
 
@@ -947,7 +956,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         return
 
-    def __findLastNonZeroValue(self, someNumbers):
+    def __findLastNonZeroValueIndex(self, someNumbers):
         """This function returns the index of the last non-zero valued entry
         in a list or tuple."""
         lastIndex = None
@@ -959,10 +968,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             return lastIndex
 
         # Find last non-zero valued index:
-        lastIndex = len(someNumbers) - 1
-        for i in range(0, lastIndex, 1):
-            if ( someNumbers[lastIndex-i] > 0 ):
-                lastIndex -= i
+        lastValidIndex = len(someNumbers) - 1
+        for i in range(0, lastValidIndex, 1):
+            lastIndex = lastValidIndex-i
+            if ( someNumbers[lastIndex] > 0 ):
                 break
 
         return lastIndex
@@ -985,9 +994,17 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         if ( self.__allowSeveralPlots ):
             styleFlag = self.__numPlotTypeLines
         else:
-            styleFlag = self.__totNumPlottedLines
+            styleFlag = 0   # Use consistent style for a plot of single-type
+            # styleFlag = self.__totNumPlottedLines
 
         return self.__lineStyles[ styleFlag % self.__numLineStyles ]
+
+    def __getMarker(self):
+        """Returns the marker for the plot"""
+        self.__myMarkerIndx = (self.__myMarkerIndx % self.__numMarkers)
+        theMarker = self.__markers[ self.__myMarkerIndx ]
+        self.__myMarkerIndx += 1
+        return theMarker
 
     def toggleSeveralPlots(self, allowSeveralPlots = True):
         """Toggles the allowance of printing several plots on the graph.
@@ -1008,7 +1025,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Ensure no data has been entered; if so, warn user that labels may be skewed.
         if ( self.__totNumPlottedLines > 0 ):
-            self.__print(3, 3)
+            self.__write.print(3, 3)
             self.__write.message = "Toggling the allowance of many plots should be done when no data has been specified for proper appearance."
             self.__write.print(1, 3)
             self.__write.message = "   All data plotted herein will have the same color."
@@ -1134,10 +1151,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             myValues[i] *= yScale
 
         # Determine the last value that has non-zero entry:
-        lastValueIndx = self.__findLastNonZeroValue( myValues )
+        lastValueIndx = self.__findLastNonZeroValueIndex( myValues )
 
-        # Use the minimum number of applicable data points:
-        numValidData = min( lastValueIndx, len(myBins)-1 )
+        # Use the minimum number of applicable data points (base off num. bins/num. values):
+        numValidData = min( lastValueIndx+1, len(myBins)-1 )
 
         # Obtain bin bounds and associated values:
         plottedBins   = []
@@ -1243,9 +1260,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             self.__write.message = "Sim. data for \"%s\" is being scaled by 10^(%.1f) for clarity." % (myLabel, yScaleFactor)
             self.__write.print(2, 2)
 
-        # Obtain x/y set for as many pairs between X/Y coords:
-        lastIndex = self.__findLastNonZeroValue( yVals )
-        numPairs = min( len(xVals), len(yVals), lastIndex )
+        # Obtain x/y set for as many pairs between X/Y coords (base on number of points):
+        lastIndex = self.__findLastNonZeroValueIndex( yVals )
+        numPairs = min( len(xVals), len(yVals), lastIndex+1 )
         xCoord = []
         yCoord = []
         if ( numPairs <= 0 ):
@@ -1270,6 +1287,29 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         else:
             self._BaseFigure__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
             color=thisLineColor, alpha=self.__opacity )
+
+        # Add legend entry for first few lines (w/ multiple plots)
+        self.__addedLine( myLabel )
+
+        return
+
+    def addErrorBar(self, xVals, yVals, xErr, yErr, myLabel = "No label given", xScale = 1, yScale = 1, expData = True):
+        """Create an errorbar type plot line"""
+
+        # Obtain min/max X/Y:
+        self.updateDynamicX( xVals )
+        self.updateDynamicY( yVals )
+
+        # Set color:
+        if ( expData ):
+            theColor = self.__expDataColor
+        else:
+            theColor = self.__getLineColor()
+        theMarker = self.__getMarker()
+
+        self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
+        marker=theMarker, color=theColor, ecolor=theColor,
+        markerfacecolor='none', linewidth=0)
 
         # Add legend entry for first few lines (w/ multiple plots)
         self.__addedLine( myLabel )

@@ -23,6 +23,7 @@ Plots have the following characteristics:
 from printClass import Print
 from plotClass import PlotClass
 from outputClass import GSMOutput
+from generalPlotTypeClasses import Scatter
 import fileModule
 
 
@@ -45,13 +46,14 @@ class PlotGSMInputFile:
     __fileCommentFlag = "#"
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
-    __dataArgs = ("data", "sim", "simlabel")
+    __dataArgs = ("data", "sim", "simlabel", "datalabel")
     __plotArgs = ("particle", "plot", "angle")
     __annotateArgs = ("annotate", "annotatepos", "otherannotate", "otherannotatepos", "otherannotatecolor", "legend")
     __miscArgs = ("comment", "c", "save", "dpi", "show", "override")
     __endArgs = ("end", "quit", "stop", "done", "new")
     __defaultAnnotatePos = 1.0E-2
     __defaultAnnotationColor = "blue"
+    __defaultExpLabel = "Exp. Data"
 
     def __init__(self, inputName=None, newPrint = Print()):
         """Constructor for the \"PlotInputFile\" class"""
@@ -95,11 +97,13 @@ class PlotGSMInputFile:
 
         # File names:
         self.__dataFiles = []
+        self.__dataLabels = []
         self.__simFiles = []
         self.__simLabels = []
         self.__numDataFiles = 0
         self.__numSimFiles = 0
         self.__numSimLabels = 0
+        self.__numDataLabels = 0
         self.__simObjects = []
         self.__numSimObjects = 0
         self.__expObjects = []
@@ -225,6 +229,47 @@ class PlotGSMInputFile:
 
     def __plotLines(self):
         """Plots all lines desired by the user"""
+
+        # Plot data and simulation lines:
+        self.__plotDataLines()   # Note: calling this first allows all legends for the line type to be shown
+        self.__plotSimLines()
+
+        # Legend information:
+        self.__myPlot.setLegendPos( self.__legendPos, self.__legendPosX, self.__legendPosY )
+
+        return
+
+    def __plotDataLines(self):
+        """Plots all data lines requested"""
+        # Verify that the number of exp. data labels meets the minimum exp. data objects created
+        if ( self.__numDataLabels < self.__numExpObjects ):
+            # Warn user:
+            self.__write.message = "%d label(s) for experimental data are missing." % (self.__numExpObjects - self.__numDataLabels)
+            self.__write.print(1, 2)
+            self.__write.message = "   Assuming the label for those sets is \"%s\"." % (self.__defaultExpLabel)
+            self.__write.print(1, 2)
+            # Append default label:
+            for i in range(self.__numDataLabels, self.__numExpObjects, 1):
+                self.__dataLabels.append( self.__defaultExpLabel )
+                self.__numDataLabels += 1
+
+        # Create lines:
+        for i in range(0, self.__numExpObjects, 1):
+            self.__write.message = "Plotting exp. data..."
+            self.__write.print(2, 2)
+
+        for expID in range(0, self.__numExpObjects, 1):
+            xVals = self.__expObjects[expID].getXValues()
+            yVals = self.__expObjects[expID].getYValues()
+            dxVals = self.__expObjects[expID].getXError()
+            dyVals = self.__expObjects[expID].getYError()
+
+            self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals, self.__dataLabels[expID])
+
+        return
+
+    def __plotSimLines(self):
+        """Plots all lines desired by the user"""
         __validPlotTypes = ("doubledif", "angleint", "energyint")
         __plotTypeName = ("double differential", "angle integrated", "energy integrated")
         __numValidPlotTypes = len(__validPlotTypes)
@@ -280,7 +325,7 @@ class PlotGSMInputFile:
             self.__plotTypes[i].startswith(__validPlotTypes[1]) or
             self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
                 # Plot PISA double differential cross sections:
-                self.__write.message = "Plotting %s PISA data..." % (__plotTypeName[plotTypeIndx])
+                self.__write.message = "Plotting %s PISA predictions..." % (__plotTypeName[plotTypeIndx])
                 self.__write.print(2, 2)
 
                 # Determine X/Y/Title for plot labeling:
@@ -336,9 +381,6 @@ class PlotGSMInputFile:
                         # Add plot type to distinguish:
                         if ( self.__plotSeveralTypes ):
                             self.__myPlot.addPlotType()
-
-        # Legend information:
-        self.__myPlot.setLegendPos( self.__legendPos, self.__legendPosX, self.__legendPosY )
 
         return
 
@@ -557,7 +599,7 @@ class PlotGSMInputFile:
 
     def __applyDataArgs(self, lineID, lineFlag):
         """Checks if the input has flag from the __dataArgs tuple"""
-        # __dataArgs = ("data", "sim")
+        # __dataArgs = ("data", "sim", "simlabel", "datalabel")
         foundFlag = True
 
         if ( lineID == self.__dataArgs[0] ):
@@ -569,9 +611,15 @@ class PlotGSMInputFile:
                 self.__write.message = "   File \"%s\" does not exist for reading experimental data from." % (self.__dataFiles[self.__numDataFiles])
                 self.__write.print(1, 2)
             else:
+                # File exists; read data file:
+                self.__numDataFiles += 1
                 self.__write.message = "   Reading experimental data..."
                 self.__write.print(2, 4)
-                self.__numDataFiles += 1
+                self.__expObjects.append( Scatter.importData(self.__dataFiles[self.__numDataFiles-1], self.__write) )
+                if ( not self.__expObjects[self.__numExpObjects] == None ):
+                    self.__numExpObjects += 1
+                else:
+                    del self.__expObjects[self.__numExpObjects]
 
         elif ( lineID == self.__dataArgs[1] ):
             # Load simulation data file:
@@ -594,6 +642,15 @@ class PlotGSMInputFile:
                     self.__numSimLabels += 1
             else:
                 self.__write.message = "No simulation legend labels given. Ignoring line..."
+                self.__write.print(1, 2)
+
+        elif ( lineID == self.__dataArgs[3] ):
+            # Add custom data labels
+            if ( len(lineFlag) > 0 ):
+                self.__dataLabels.append( lineFlag.strip() )
+                self.__numDataLabels += 1
+            else:
+                self.__write.message = "No data legend labels given. Ignoring line..."
                 self.__write.print(1, 2)
 
         else:
@@ -886,6 +943,9 @@ class PlotGSMInputFile:
             self.__myPlot.showCurrentPlot()
         if ( not self.__saveName == None ):
             self.__myPlot.savePlot(self.__saveName, self.__figDPI, self.__showPlot, self.__override)
+        if ( not self.__showPlot and self.__saveName == None ):
+            self.__write.message = "The plot is not being saved or shown (as the input specified)."
+            self.__write.print(1, 2)
 
 
         # Create new plot object:

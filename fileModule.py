@@ -75,7 +75,7 @@ def deleteFile( fileName ):
         __filePrint.print(1, 2)
 
 def verifyFileName( fileName = None, ext = ".png", overrideExisting = False ):
-    """Determines if filename is valid (if not, obtains filename that is)"""
+    """Determines if filename is available (if not, obtains filename that is)"""
     if ( fileName == None ):
         fileName = "file.txt"
         __filePrint.message = "No filename was passed to validate filename. Assuming name is \"%s\"." % (fileName)
@@ -155,7 +155,6 @@ def readFile( fileName, printData = False ):
     # Initialize returned object:
     fileData = []
 
-
     # Obtain data
     doesFileExist = fileExists( fileName )
     if ( doesFileExist ):
@@ -181,9 +180,8 @@ def readFile( fileName, printData = False ):
 
     else:
         # File doesn't exist, no data to return
-        __filePrint.message = "File \"%s\" doesn't exists." % (fileName)
+        __filePrint.message = "File \"%s\" doesn't exist." % (fileName)
         __filePrint.print(1, 2)
-
 
     # Return object:
     return fileData
@@ -199,4 +197,9 @@ def parseLine( dataLine, separator = " ", maxSplits = None ):
         parseData = dataLine.split( separator )
     else:
         parseData = dataLine.split( separator, maxSplits )
+
+    # Remove excess spacing in the elements:
+    for i in range(0, len(parseData), 1):
+        parseData[i] = parseData[i].strip()
+
     return __removeEmpty( parseData )
