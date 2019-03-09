@@ -458,8 +458,8 @@ class _AxisLimits(_BaseFigure):
     __lowestLinScaleValueAllowed = float(0.00)
     __lowestLogScaleValueAllowed = float(1.0E-20)
     # For dynamicall scaling X/Y axes
-    __dynamicXScalingFrac = 0.05
-    __dynamicYScalingFrac = 0.05
+    __dynamicXScalingFrac = 0.10
+    __dynamicYScalingFrac = 0.10
 
     def __init__(self, newDynamicX = True, newDynamicY = True, newPrint = Print()):
         """Constructor for the axis limits class"""
@@ -863,7 +863,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
     # For line coloring and styles:
     __lineColors = ('blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', \
     'olive', 'c', 'mediumaquamarine', 'y', 'rosybrown')
-    __expDataColor = ("gray")
+    __expDataColor = ("dimgray")
     __lineStyles = ('-','--',':','-.')
     __markers = ("v", "8", "s", "p", "*", "h", "D", "o", "^")
     __numMarkers = len(__markers)
@@ -915,42 +915,17 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
     def __applyLegend(self):
         """Applies the legend to the plot"""
-        print(self.__legendEntries)
         if ( self.__legendPosXY == None ):
-            self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos)
+            # self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos)
+            self._BaseFigure__axis.legend(loc=self.__legendPos)
         else:
             self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos, bbox_to_anchor=self.__legendPosXY)
 
         return
 
-    def __addLegendLabel(self, someLabel="No label was given"):
-        """Adds a legend label to the legend"""
-
-        # Validate argument:
-        if ( not isinstance(someLabel, str) ):
-            try:
-                someLabel = str(someLabel)
-            except:
-                self.__write.print(3, 2)
-                self.__write.message = "Could not determine line type label: ", someLabel
-                self.__write.print(1, 2)
-                self.__write.message = "   No legend label will be added."
-                self.__write.print(1, 2)
-                return
-
-        # Add label, if appropriate:
-        if ( self.__allowSeveralPlots ):
-            if ( self.__numPlotTypes == 0 ):
-                self.__legendEntries.append( someLabel )
-        else:
-            self.__legendEntries.append( someLabel )
-
-        return
-
-    def __addedLine(self, someLabel="No label was given"):
+    def __addedLine(self):
         """Checks to add a legend label and adds a plot line to the object"""
 
-        self.__addLegendLabel( someLabel )
         self.__numPlotTypeLines += 1
         self.__totNumPlottedLines += 1
 
@@ -1179,10 +1154,15 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         self.updateDynamicX( plottedBins )
         self.updateDynamicY( plottedValues )
 
+        # Only use first few labels:
+        if ( self.__numPlotTypes > 0 ):
+            myLabel = None
+
         if ( not self.__useOwnHistPlot ):
             # Plot histogram:
-            self._BaseFigure__axis.hist(plottedValues, bins=plottedBins, histtype='step', color=self.__getLineColor())
-            self.__addedLine( myLabel )
+            self._BaseFigure__axis.hist(plottedValues, bins=plottedBins,
+            histtype='step', color=self.__getLineColor(), label=myLabel)
+            self.__addedLine()
 
         else:
             # Create new X/Y values to emulate the look of a histogram (i.e. 2 Y values per X value, except at edges)
@@ -1280,16 +1260,20 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         thisLineColor = self.__getLineColor()
         thisLineStyle = self.__getLineStyle()
 
+        # Remove legend label if desired:
+        if ( self.__numPlotTypes > 0 ):
+            myLabel = None
+
         # X/Y values are all valid; create line:
         if ( self._AxisLimits__yScale == self._AxisLimits__validScales[0] ):
             self._BaseFigure__axis.plot( xCoord, yCoord, linestyle=thisLineStyle,
-            color=thisLineColor, alpha=self.__opacity )
+            color=thisLineColor, alpha=self.__opacity, label=myLabel)
         else:
             self._BaseFigure__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
-            color=thisLineColor, alpha=self.__opacity )
+            color=thisLineColor, alpha=self.__opacity, label=myLabel)
 
         # Add legend entry for first few lines (w/ multiple plots)
-        self.__addedLine( myLabel )
+        self.__addedLine()
 
         return
 
@@ -1308,11 +1292,12 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         theMarker = self.__getMarker()
 
         self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
-        marker=theMarker, color=theColor, ecolor=theColor,
-        markerfacecolor='none', linewidth=0)
+        marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
+        mfc='none', linewidth=0, label=myLabel)
 
         # Add legend entry for first few lines (w/ multiple plots)
-        self.__addedLine( myLabel )
+        if ( not expData ):
+            self.__addedLine()
 
         return
 

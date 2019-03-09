@@ -12,15 +12,15 @@ simLabel GSM CEM
 #
 c Plot Type Arguments:
 c ----------------------------------
-plot energyint
-particle c12
-# angle 45 361
-data C12.eint.dat
-dataLabel Exp. Data
+plot doubledifferential
+particle he4
+angle 90 45
+data He4at90.dat
+dataLabel Exp. Data (at $90^{\circ}$)
 #
 c Annotation Arguments:
 c ----------------------------------
-annotate $^{238}$U (5.5~GeV p, X) $^{12}$C
+annotate $^{238}$U (5.5~GeV p, X) $^{4}$He
 annotatePos 10 2.0E-02
 # otherAnnotate neutrons
 # otherAnnotatePos 110 1.0E+01
@@ -39,8 +39,8 @@ c Axis Limits:
 c ----------------------------------
 # xscale linear
 # yscale log
-# xrange 0 180
-yrange 6.0E-02 3.0E+00
+xrange 0 150
+# yrange 6.0E-02 3.0E+00
 c Figure Labels:
 c ----------------------------------
 # xlabel Some X-Axis Label
