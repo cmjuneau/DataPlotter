@@ -12,9 +12,9 @@ simLabel GSM CEM
 #
 c Plot Type Arguments:
 c ----------------------------------
-plot doubledifferential
+plot doublediff
 particle he4
-angle 90 45
+angle 90
 data He4at90.dat
 dataLabel Exp. Data (at $90^{\circ}$)
 #

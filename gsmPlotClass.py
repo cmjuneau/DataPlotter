@@ -49,11 +49,13 @@ class PlotGSMInputFile:
     __dataArgs = ("data", "sim", "simlabel", "datalabel")
     __plotArgs = ("particle", "plot", "angle")
     __annotateArgs = ("annotate", "annotatepos", "otherannotate", "otherannotatepos", "otherannotatecolor", "legend")
-    __miscArgs = ("comment", "c", "save", "dpi", "show", "override")
+    __miscArgs = ("comment", "c", "save", "dpi", "show", "override", "scalesim", "scaledata")
     __endArgs = ("end", "quit", "stop", "done", "new")
     __defaultAnnotatePos = 1.0E-2
     __defaultAnnotationColor = "blue"
     __defaultExpLabel = "Exp. Data"
+    __defaultXScaling = 1.00
+    __defaultYScaling = 1.00
 
     def __init__(self, inputName=None, newPrint = Print()):
         """Constructor for the \"PlotInputFile\" class"""
@@ -110,6 +112,13 @@ class PlotGSMInputFile:
         self.__numExpObjects = 0
         # Whether or not to override:
         self.__override = False
+        # Scaling of data:
+        self.__scaleSimX = []
+        self.__scaleSimY = []
+        self.__scaleDataX = []
+        self.__scaleDataY = []
+        self.__numSimScale = 0
+        self.__numDataScale = 0
 
         # Data regarding the file:
         self.__inputName = None
@@ -230,6 +239,11 @@ class PlotGSMInputFile:
     def __plotLines(self):
         """Plots all lines desired by the user"""
 
+        # Turn off multiple plots if they weren't specified:
+        if ( self.__numPlotTypes <= 1 and self.__numParticles <= 1 and self.__numAngles <= 1 ):
+            self.__plotSeveralTypes = False
+            self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
+
         # Plot data and simulation lines:
         self.__plotDataLines()   # Note: calling this first allows all legends for the line type to be shown
         self.__plotSimLines()
@@ -253,6 +267,13 @@ class PlotGSMInputFile:
                 self.__dataLabels.append( self.__defaultExpLabel )
                 self.__numDataLabels += 1
 
+        # Setup scaling factors for all values not passed in:
+        if ( self.__numDataScale < self.__numExpObjects ):
+            for i in range(self.__numDataScale, self.__numExpObjects, 1):
+                self.__scaleDataX.append( self.__defaultXScaling )
+                self.__scaleDataY.append( self.__defaultYScaling )
+                self.__numDataScale += 1
+
         # Create lines:
         for i in range(0, self.__numExpObjects, 1):
             self.__write.message = "Plotting exp. data..."
@@ -264,7 +285,10 @@ class PlotGSMInputFile:
             dxVals = self.__expObjects[expID].getXError()
             dyVals = self.__expObjects[expID].getYError()
 
-            self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals, self.__dataLabels[expID])
+            self.__myPlot.addScatter(xVals, yVals, self.__dataLabels[expID],
+            self.__scaleDataX[expID], self.__scaleDataY[expID])
+            #self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals,
+            #self.__dataLabels[expID], self.__scaleDataX[expID], self.__scaleDataY[expID])
 
         return
 
@@ -282,10 +306,12 @@ class PlotGSMInputFile:
                 self.__simLabels.append( self.__simLabels[i%self.__numSimLabels] )
             self.__numSimLabels = len(self.__simLabels)
 
-        # Turn off multiple plots if they weren't specified:
-        if ( self.__numPlotTypes <= 1 and self.__numParticles <= 1 and self.__numAngles <= 1 ):
-            self.__plotSeveralTypes = False
-            self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
+        # Setup scaling factors for all values not passed in:
+        if ( self.__numSimScale < self.__numSimObjects ):
+            for i in range(self.__numSimScale, self.__numSimObjects, 1):
+                self.__scaleSimX.append( self.__defaultXScaling )
+                self.__scaleSimY.append( self.__defaultYScaling )
+                self.__numSimScale += 1
 
         for i in range(0, self.__numPlotTypes, 1):
             # Validate plot type, otherwise continue:
@@ -376,7 +402,7 @@ class PlotGSMInputFile:
                                 self.__write.message = "No data exists for %s particles at %.2f degrees." % (self.__particles[j], self.__plotAngles[k])
                                 self.__write.print(2, 2)
                                 continue
-                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l])
+                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l], self.__scaleSimX[l], self.__scaleSimY[1])
 
                         # Add plot type to distinguish:
                         if ( self.__plotSeveralTypes ):
@@ -840,7 +866,7 @@ class PlotGSMInputFile:
 
     def __applyMiscArgs(self, lineID, lineFlag):
         """Checks if the input has flag from the __miscArgs tuple"""
-        # __miscArgs = ("comment", "c", "save", "dpi", "show")
+        # __miscArgs = ("comment", "c", "save", "dpi", "show", "override", "scalesim", "scaledata")
 
         foundFlag = True
         if ( lineID == self.__miscArgs[0] ):
@@ -901,6 +927,98 @@ class PlotGSMInputFile:
             else:
                 self.__write.message = "Invalid flag for overriding plot: %s" % (lineFlag)
                 self.__write.print(1, 2)
+
+        elif ( lineID == self.__miscArgs[6] ):
+            # scaleSim: read X and Y scaling:
+            parsedLine = fileModule.parseLine( lineFlag )
+            numFactors = len(parsedLine)
+            if ( numFactors <= 0 ):
+                self.__write.message = "No scaling factors provided for scaling simulation data."
+                self.__write.print(1, 2)
+                self.__write.message = "   No scaling will occur."
+                self.__write.print(1, 2)
+                xVal = self.__defaultXScaling
+                yVal = self.__defaultYScaling
+            else:
+                # Obtain X value:
+                if ( numFactors <= 1 ):
+                    self.__write.message = "Scaling of simulation data should contain 2 arguments: %s" % (lineFlag)
+                    self.__write.print(1, 2)
+                    self.__write.message = "   Assuming given scaling factor is for Y axis..."
+                    self.__write.print(1, 2)
+                    xVal = self.__defaultXScaling
+                    yIndx = 0
+                else:
+                    yIndx = 1
+                    try:
+                        xVal = float(parsedLine[0])
+                    except:
+                        xVal = self.__defaultXScaling
+                        self.__write.message = "Unable to convert X scaling factor to float: %s" % (parsedLine[0])
+                        self.__write.print(1, 2)
+                        self.__write.message = "   X scaling of simulation data will not occur."
+                        self.__write.print(1, 2)
+
+                # Obtain Y value:
+                try:
+                    yVal = float(parsedLine[yIndx])
+                except:
+                    yVal = self.__defaultYScaling
+                    self.__write.message = "Unable to convert Y scaling factor to float: %s" % (parsedLine[yIndx])
+                    self.__write.print(1, 2)
+                    self.__write.message = "   Y scaling of simulation data will not occur."
+                    self.__write.print(1, 2)
+
+            # Apply scaling factors:
+            self.__scaleSimX.append ( xVal )
+            self.__scaleSimY.append ( yVal )
+            self.__numSimScale += 1
+
+        elif ( lineID == self.__miscArgs[7] ):
+            # scaleData: read X and Y scaling:
+            parsedLine = fileModule.parseLine( lineFlag )
+            numFactors = len(parsedLine)
+            if ( numFactors <= 0 ):
+                self.__write.message = "No scaling factors provided for scaling experimental data."
+                self.__write.print(1, 2)
+                self.__write.message = "   No scaling will occur."
+                self.__write.print(1, 2)
+                xVal = self.__defaultXScaling
+                yVal = self.__defaultYScaling
+            else:
+                # Obtain X value:
+                if ( numFactors <= 1 ):
+                    self.__write.message = "Scaling of experimental data should contain 2 arguments: %s" % (lineFlag)
+                    self.__write.print(1, 2)
+                    self.__write.message = "   Assuming given scaling factor is for Y axis..."
+                    self.__write.print(1, 2)
+                    xVal = self.__defaultXScaling
+                    yIndx = 0
+                else:
+                    yIndx = 1
+                    try:
+                        xVal = float(parsedLine[0])
+                    except:
+                        xVal = self.__defaultXScaling
+                        self.__write.message = "Unable to convert X scaling factor to float: %s" % (parsedLine[0])
+                        self.__write.print(1, 2)
+                        self.__write.message = "   X scaling of experimental data will not occur."
+                        self.__write.print(1, 2)
+
+                # Obtain Y value:
+                try:
+                    yVal = float(parsedLine[yIndx])
+                except:
+                    yVal = self.__defaultYScaling
+                    self.__write.message = "Unable to convert Y scaling factor to float: %s" % (parsedLine[yIndx])
+                    self.__write.print(1, 2)
+                    self.__write.message = "   Y scaling of experimental data will not occur."
+                    self.__write.print(1, 2)
+
+            # Apply scaling factors:
+            self.__scaleDataX.append ( xVal )
+            self.__scaleDataY.append ( yVal )
+            self.__numDataScale += 1
 
         else:
             foundFlag = False

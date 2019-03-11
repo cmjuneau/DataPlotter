@@ -660,38 +660,38 @@ class Scatter:
         """Returns the X values of the points as a tuple"""
         xVals = None
         if ( len(self.__xVals) > 0 ):
-            xVals = ()
+            xVals = []
             for i in range(0, len(self.__xVals), 1):
-                xVals += (self.__xVals[i],)
+                xVals.append(self.__xVals[i])
         # return xVals
-        return self.__xVals
+        return xVals
 
     def getYValues(self):
         """Returns the Y values of the points as a tuple"""
         yVals = None
         if ( len(self.__yVals) > 0 ):
-            yVals = ()
+            yVals = []
             for i in range(0, len(self.__yVals), 1):
-                yVals += (self.__yVals[i],)
+                yVals.append(self.__yVals[i])
         # return yVals
-        return self.__yVals
+        return yVals
 
     def getXError(self):
         """Returns the X-error values of the points as a tuple"""
         xError = None
         if ( len(self.__xError) > 0 ):
-            xError = ()
+            xError = []
             for i in range(0, len(self.__xError), 1):
-                xError += (self.__xError[i],)
+                xError.append(self.__xError[i])
         return xError
 
     def getYError(self):
         """Returns the Y-error values of the points as a tuple"""
         yError = None
         if ( len(self.__yError) > 0 ):
-            yError = ()
+            yError = []
             for i in range(0, len(self.__yError), 1):
-                yError += (self.__yError[i],)
+                yError.append(self.__yError[i])
         return yError
 
     def getMaxXError(self):

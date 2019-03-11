@@ -41,6 +41,7 @@ plotlib.rcParams['text.usetex'] = True
 plotlib.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
 plotlib.rcParams.update({'font.size': __figureFont})
 plt.rc('font', **{'family': 'serif'})   # Which font to use
+plt.rc('axes', axisbelow=True)
 
 
 # Contains the figure and axis objects to use when plotting
@@ -901,7 +902,6 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         """Resets all the class's member-variables to their defaults"""
 
         # Regarding legend information:
-        self.__legendEntries = []
         self.__legendPos = self.__defaultLegendPos
         self.__legendPosXY = None
 
@@ -916,10 +916,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
     def __applyLegend(self):
         """Applies the legend to the plot"""
         if ( self.__legendPosXY == None ):
-            # self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos)
             self._BaseFigure__axis.legend(loc=self.__legendPos)
         else:
-            self._BaseFigure__axis.legend(self.__legendEntries, loc=self.__legendPos, bbox_to_anchor=self.__legendPosXY)
+            self._BaseFigure__axis.legend(loc=self.__legendPos, bbox_to_anchor=self.__legendPosXY)
 
         return
 
@@ -1277,14 +1276,116 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         return
 
-    def addErrorBar(self, xVals, yVals, xErr, yErr, myLabel = "No label given", xScale = 1, yScale = 1, expData = True):
-        """Create an errorbar type plot line"""
+    def addScatter(self, xVals, yVals, myLabel="No label given", xScale=1.00, yScale=1.00, expData=False):
+        """Adds a scatter plot to the object"""
 
-        # Obtain min/max X/Y:
+        # Verify inputs are valid:
+        invalidInput = False
+        if ( not isinstance(xVals, list) ):
+            self.__write.message = "Scatter plot requires a list of numbers for its X values."
+            self.__write.print(1, 2)
+            invalidInput = True
+        if ( not isinstance(yVals, list) ):
+            self.__write.message = "Scatter plot requires a list of numbers for its Y values."
+            self.__write.print(1, 2)
+            invalidInput = True
+        if ( invalidInput ):
+            self.__write.message = "   Unable to plot values."
+            self.__write.print(1, 2)
+            return
+
+        # Scale data:
+        if ( xScale <= 0.00 ):
+            self.__write.message = "Cannot scale X values by %.3f. Values will not be scaled." % (xScale)
+            self.__write.print(1, 2)
+            xScale = 1.00
+        if ( yScale <= 0.00 ):
+            self.__write.message = "Cannot scale Y values by %.3f. Values will not be scaled." % (yScale)
+            self.__write.print(1, 2)
+            yScale = 1.00
+        # Increase Y-scale based on plot type:
+        yScaleFactor = -self.__numPlotTypes * self.__typeExpScaling
+        yScale = yScale * pow(10, yScaleFactor)
+        if ( self.__numPlotTypes > 0 ):
+            self.__write.message = "Data for \"%s\" is being scaled by 10^(%.1f) for clarity." % (myLabel, yScaleFactor)
+            self.__write.print(2, 2)
+        for i in range(0, len(xVals), 1):
+            xVals[i] = xVals[i] * xScale
+        for i in range(0, len(yVals), 1):
+            yVals[i] = yVals[i] * yScale
+
+        # Update dynamic min/max limits for X and Y:
         self.updateDynamicX( xVals )
         self.updateDynamicY( yVals )
 
-        # Set color:
+        # Remove legend label if desired:
+        if ( self.__numPlotTypes > 0 and not expData ):
+            myLabel = None
+
+        # Obtain what will be the line's properties:
+        if ( expData ):
+            theColor = self.__expDataColor
+        else:
+            theColor = self.__getLineColor()
+        theMarker = self.__getMarker()
+
+        self._BaseFigure__axis.scatter(xVals, yVals, s=60, marker=theMarker,
+        edgecolors=theColor, facecolors='none', linewidth=1.5, label=myLabel,
+        alpha=0.5)
+
+        # Add plot if not experimental data:
+        if ( not expData ):
+            self.__addedLine()
+
+        return
+
+    def addErrorBar(self, xVals, yVals, xErr=None, yErr=None, myLabel = "No label given", xScale = 1.00, yScale = 1.00, expData = True):
+        """Create an errorbar type plot line"""
+
+        # Verify inputs are valid:
+        invalidInput = False
+        if ( not isinstance(xVals, list) ):
+            self.__write.message = "Error bar plot requires a list of numbers for its X values."
+            self.__write.print(1, 2)
+            invalidInput = True
+        if ( not isinstance(yVals, list) ):
+            self.__write.message = "Error bar plot requires a list of numbers for its Y values."
+            self.__write.print(1, 2)
+            invalidInput = True
+        if ( invalidInput ):
+            self.__write.message = "   Unable to plot values."
+            self.__write.print(1, 2)
+            return
+
+        # Scale data:
+        if ( xScale <= 0.00 ):
+            self.__write.message = "Cannot scale X values by %.3f. Values will not be scaled." % (xScale)
+            self.__write.print(1, 2)
+            xScale = 1.00
+        if ( yScale <= 0.00 ):
+            self.__write.message = "Cannot scale Y values by %.3f. Values will not be scaled." % (yScale)
+            self.__write.print(1, 2)
+            yScale = 1.00
+        # Increase Y-scale based on plot type:
+        yScaleFactor = -self.__numPlotTypes * self.__typeExpScaling
+        yScale = yScale * pow(10, yScaleFactor)
+        if ( self.__numPlotTypes > 0 ):
+            self.__write.message = "Exp. data for \"%s\" is being scaled by 10^(%.1f) for clarity." % (myLabel, yScaleFactor)
+            self.__write.print(2, 2)
+        for i in range(0, len(xVals), 1):
+            xVals[i] = xVals[i] * xScale
+        for i in range(0, len(yVals), 1):
+            yVals[i] = yVals[i] * yScale
+
+        # Update dynamic min/max limits for X and Y:
+        self.updateDynamicX( xVals )
+        self.updateDynamicY( yVals )
+
+        # Remove legend label if desired:
+        if ( self.__numPlotTypes > 0 and not expData ):
+            myLabel = None
+
+        # Obtain what will be the line's properties:
         if ( expData ):
             theColor = self.__expDataColor
         else:
@@ -1295,7 +1396,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
         mfc='none', linewidth=0, label=myLabel)
 
-        # Add legend entry for first few lines (w/ multiple plots)
+        # Add plot if not experimental data:
         if ( not expData ):
             self.__addedLine()
 
