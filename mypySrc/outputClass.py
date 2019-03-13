@@ -75,6 +75,7 @@ class GSMOutput:
         self.__fileLen = 0
         self.__fileRead = False
         self.__pisaData = gsmData.DoubleDiffPISA( self.__write )
+        self.__energySpectra = gsmData.EnergySpectra( self.__write )
 
         # Read file:
         self.__fileName = ""

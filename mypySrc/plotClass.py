@@ -32,7 +32,6 @@ import fileModule
 __version__ = "1.0.0"
 
 
-
 # Plot defaults:
 # Use LaTeX as text editor:
 _defaultFontSize = 11

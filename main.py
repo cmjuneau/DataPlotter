@@ -14,9 +14,11 @@ This file contains the methods used to plot stuff
 # IMPORTS:
 import sys
 import datetime
+
+
 # Modules:
-from gsmPlotClass import PlotGSMInputFile
-from outputClass import GSMOutput, CEMOutput
+sys.path.insert(0, './mypySrc')   # Add personal python scripts to path:
+import gsmPlotClass
 
 # For testing ideas:
 import testingModule
@@ -63,7 +65,7 @@ if ( testingModule.letsTest ):
 
 
 # Create input file class:
-inputObj = PlotGSMInputFile("pU.plot.inp")
+inputObj = gsmPlotClass.PlotGSMInputFile("pU.plot.inp")
 
 
 ################################################################################

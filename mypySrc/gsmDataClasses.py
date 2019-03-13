@@ -45,6 +45,7 @@ USAGE (example):
 import sys
 
 # MODULES:
+import generalPlotTypeClasses as genPlotCls
 from printClass import Print
 
 # VERSION Number:
@@ -485,3 +486,203 @@ class DoubleDiffPISA:
     def getNumParticles(self):
         """Returns the number of particles that exist in the object"""
         return self.__numParticles
+
+
+class ParticleEnergySpectra( genPlotCls.Histogram ):
+    """The \"EnergySpectra\" class is mainly a histogram flagged by production
+    type (\"Total\", \"Cascade\", \"Precompound\", and \"Total Evaporation\")
+    containing a histogram for each production type for a single particle.
+    """
+    __particleIDs = ("neutrons", "protons", "deuterons", "tritons",
+    "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
+    __numParticleIDs = len(__particleIDs)
+    __histogramFlags = ("total", "cascade", "precompound", "total evaporation")
+    __numHistoFlags = len(__histogramFlags)
+
+    def __init__(self, particleID, newPrint=Print() ):
+        """Constructor for the class"""
+
+        # Set default values:
+        self.__write = newPrint
+        self.__resetMembers()
+        self.__constructed = True
+
+        # Set particle name:
+        particleID = particleID.lower().strip()
+        for partIndx in range(0, self.__numParticleIDs, 1):
+            if ( particleID == self.__particleIDs[partIndx] ):
+                self.__particleID = particleID
+                break
+        if ( self.__particleID is None ):
+            self.__write.message = "An invalid particle identifier (\"%s\") was used when creating a particle's energy spectra."
+            self.__write.print(1, 2)
+            self.__constructed = False
+
+        return
+
+    def __del__(self):
+        """Deconstructor for the class"""
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all member variables of the object"""
+
+        self.__constructed = False
+
+        # Particle information:
+        self.__particleID = None
+        # Histogram information:
+        self.__partHistograms = []
+        self.__numHistograms = 0
+
+        return
+
+    def addHistogram(self, newHistogram):
+        """Adds a histogram to the object"""
+        validHisto = False
+        if ( isinstance(newHistogram, genPlotCls.Histogram) ):
+            # Verify histogram has a note consistent with the object:
+            newHistoNote = newHistogram.queryNote().lower().strip()
+            for flagIndx in range(0, self.__numHistoFlags, 1):
+                if ( newHistoNote == self.__histogramFlags[flagIndx] ):
+                    validHisto = True
+                    break
+            if ( not validHisto ):
+                self.__write.message = "The histogram has a note inconsistent with this object: %s" % (newHistoNote)
+                self.__write.print(1, 2)
+                self.__write.message = "   The histogram will not be added to the object."
+                self.__write.print(1, 2)
+        else:
+            self.__write.message = "Invalid parameter type for adding a histogram."
+            self.__write.print(1, 2)
+
+        if ( validHisto ):
+            self.__partHistograms.append( newHistogram )
+            self.__numHistograms += 1
+
+        return
+
+    def queryParticleID(self):
+        """Returns the particle ID"""
+        return self.__particleID
+
+    def queryHistogram(self, histFlag=__histogramFlags[0]):
+        """Returns a histogram with the given flag"""
+        theHistogram = None
+
+        # Validate desired histogram flag:
+        validFlag = False
+        histFlag = histFlag.lower().strip()
+        for flagIndx in range(0, self.__numHistoFlags, 1):
+            if ( histFlag == self.__histogramFlags[flagIndx] ):
+                validFlag = True
+                break
+
+        # Search for histogram with the given flag:
+        if ( validFlag ):
+            containsHist = False
+            for histIndx in range(0, self.__numHistograms, 1):
+                if ( histFlag == self.__partHistograms[histIndx].queryNote().lower().strip() ):
+                    containsHist = True
+                    theHistogram = self.__partHistograms[histIndx]
+                    break
+            if ( not containsHist ):
+                self.__write.message = "The histogram with flag \"%s\" does not exist within the %s particle's energy spectra." % (histFlag, self.__particleID)
+                self.__write.print(1, 2)
+        else:
+            self.__write.message = "An invalid histogram flag (\"%s\") was used for querying the %s's histogram's energy spectra." % (histFlag, self.__particleID)
+            self.__write.print(1, 2)
+
+        return theHistogram
+
+
+class ParticleData:
+    """The \"ParticleData\" object contains information printed by CEM and GSM
+    for the printed particle. This includes energy spectra and other misc.
+    information
+    """
+    __particleIDs = ("neutrons", "protons", "deuterons", "tritons",
+    "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
+    __numParticleIDs = len(__particleIDs)
+
+    def __init__(self, particleID, newPrint = Print() ):
+        """Constructor for object"""
+
+        # Set defaults:
+        self.__write = newPrint
+        self.__resetMembers()
+
+        # Set particle ID:
+        self.__setParticleID(particleID)
+        self.__resetObjects()
+        self.__constructed = True
+
+        if ( self.__particleID is None ):
+            self.__constructed = False
+
+        return
+
+    def __del__(self):
+        """Destructor for object"""
+        self.__resetObjects()
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all members of the object"""
+        self.__particleID = None
+
+        return
+
+    def __resetObjects(self):
+        """Resets all internal objects"""
+        self.__energySpecta = ParticleEnergySpectra( self.__particleID, self.__write)
+
+        return
+
+    def __setParticleID(self, particleID):
+        """Sets the object's particle ID"""
+        # Validate input:
+        validID = False
+        particleID = particleID.lower().strip()
+        for partIndx in range(0, self.__numParticleIDs, 1):
+            if ( particleID == self.__particleIDs[partIndx] ):
+                validID = True
+        if ( validID ):
+            self.__particleID = particleID
+        else:
+            self.__write.message = "Invalid particle ID (\"%s\") was specified." % (particleID)
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to create particle data object."
+            self.__write.print(1, 2)
+
+        return
+
+    def queryParticleID(self):
+        """Returns the particle ID to client"""
+        return self.__particleID
+
+    def parseFileData(self, newFileData ):
+        """Parses the information given lines of a file"""
+        if ( not isinstance(newFileData, list) ):
+            self.__write.message = "The file data passed in must be a list."
+            self.__write.print(1, 2)
+            self.__write.message = "   Unable to parse data."
+            self.__write.print(1, 2)
+            return
+
+        # Bring all data to lower case and remove empty lines:
+        fileData = []
+        for lineIndx in range(0, len(newFileData), 1):
+
+            newFileData[lineIndx] = newFileData[lineIndx].lower().strip()
+            if ( newFileData[lineIndx] == "" ):
+                continue
+
+            fileData.append( newFileData[lineIndx] )
+
+        # Read through data:
+        dataLen = len(fileData)
+
+        return

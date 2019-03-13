@@ -66,7 +66,7 @@ class Histogram:
 
     def __resetMembers(self):
         """Resets all members"""
-        self.__information = "No information given"
+        self.__note = "No information given"
         self.__yValues = []
         self.__numYValues = 0
         self.__binBounds = []
@@ -195,6 +195,10 @@ class Histogram:
 
         self.__note = newNote
         return
+
+    def queryNote(self):
+        """Returns the histogram's note"""
+        return self.__note
 
     def appendDataPoint(self, upperBinBound, yValue):
         """Appends a data point to the end of the histogram"""

@@ -285,10 +285,8 @@ class PlotGSMInputFile:
             dxVals = self.__expObjects[expID].getXError()
             dyVals = self.__expObjects[expID].getYError()
 
-            self.__myPlot.addScatter(xVals, yVals, self.__dataLabels[expID],
-            self.__scaleDataX[expID], self.__scaleDataY[expID])
-            #self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals,
-            #self.__dataLabels[expID], self.__scaleDataX[expID], self.__scaleDataY[expID])
+            self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals,
+            self.__dataLabels[expID], self.__scaleDataX[expID], self.__scaleDataY[expID])
 
         return
 
