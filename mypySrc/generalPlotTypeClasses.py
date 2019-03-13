@@ -79,7 +79,7 @@ class Histogram:
         lastIndex = None
 
         # Ensure the numbers are a list/tuple of floats or ints:
-        if ( not isinstance(someNumbers, (list, tuple)) ):
+        if ( not isinstance(someValues, (list, tuple)) ):
             self.__write.message = "Cannot find the last non-zero valued entry in any type except lists or tuples."
             self.__write.print(1, 2)
             return lastIndex
@@ -227,27 +227,27 @@ class Histogram:
 
         return
 
-    def getYValues(self):
+    def queryYValues(self):
         """Returns the Y-vaules of the histogram object"""
         return self.__yValues
 
-    def getBinBounds(self):
+    def queryBinBounds(self):
         """Returns the bin bounds for the histogram object"""
         return self.__binBounds
 
-    def getNumYValues(self):
+    def queryNumYValues(self):
         """Returns the number of data points that exist in the particle"""
         return self.__numYValues
 
-    def getNumBins(self):
+    def queryNumBins(self):
         """Returns the number of bins that exist in the particle"""
         return self.__numBins
 
-    def getBoundsAndValues(self):
+    def queryBoundsAndValues(self):
         """Returns the bin bounds and associated values to client"""
         return (self.getBinBounds(), self.getYValues())
 
-    def getInformation(self):
+    def queryNote(self):
         """Returns the note stored in the histogram object"""
         return self.__note
 

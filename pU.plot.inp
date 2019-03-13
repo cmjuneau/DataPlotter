@@ -6,17 +6,19 @@ comment Some comment about the plot.
 c Data Arguments:
 c ----------------------------------
 # data someDataFile.dat
-sim pU.g.out
-sim pU.c.out
+sim pBe.g.out
+# sim pU.g.out
+# sim pU.c.out
 simLabel GSM CEM
 #
 c Plot Type Arguments:
 c ----------------------------------
-plot doublediff
-particle he4
+plot energyspectrum
+particle neutrons
 angle 90
-data He4at90.dat
-dataLabel Exp. Data (at $90^{\circ}$)
+origin total
+# data He4at90.dat
+# dataLabel Exp. Data (at $90^{\circ}$)
 #
 c Annotation Arguments:
 c ----------------------------------
@@ -39,8 +41,8 @@ c Axis Limits:
 c ----------------------------------
 # xscale linear
 # yscale log
-xrange 0 150
-# yrange 6.0E-02 3.0E+00
+# xrange 0 150
+# yrange 8.0E-03 2.0E+01
 c Figure Labels:
 c ----------------------------------
 # xlabel Some X-Axis Label

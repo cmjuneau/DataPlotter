@@ -42,12 +42,17 @@ class PlotGSMInputFile:
     "$^{6}$He", "$^{6}$Li", "$^{7}$Li", "$^{8}$Li", "$^{9}$Li", "$^{7}$Be", "$^{9}$Be", "$^{10}$Be",
     "$^{9}$B", "$^{10}$B", "$^{11}$B", "$^{12}$B", "$^{11}$C", "$^{12}$C", "$^{13}$C", "$^{14}$C",
     "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si")
+    __validParticleDataIDs = ("neutrons", "protons", "deuterons", "tritons",
+    "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
+    __validLaTeXParticleDataIDS = ("Neutron", "Proton", "Deuterium", "Tritium", "$^{3}$He", "$^{4}$He",
+    "$\pi^{-}$", "$\pi^{0}$", "$\pi^{+}$")
+    __numValidParticleDataIDs = len(__validParticleDataIDs)
     __numParticleNames = len(__validParticles)
     __fileCommentFlag = "#"
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
     __dataArgs = ("data", "sim", "simlabel", "datalabel")
-    __plotArgs = ("particle", "plot", "angle")
+    __plotArgs = ("particle", "plot", "angle", "origin")
     __annotateArgs = ("annotate", "annotatepos", "otherannotate", "otherannotatepos", "otherannotatecolor", "legend")
     __miscArgs = ("comment", "c", "save", "dpi", "show", "override", "scalesim", "scaledata")
     __endArgs = ("end", "quit", "stop", "done", "new")
@@ -186,11 +191,19 @@ class PlotGSMInputFile:
         self.__saveName = None
 
         # Regarding what to plot:
+        # (PISA)
         self.__particles = []
         self.__latexParticleID = []
         self.__numParticles = 0
         self.__plotAngles = []
         self.__numAngles = 0
+        # (Particle Data)
+        self.__particleDataPlot = []
+        self.__latexParticleData = []
+        self.__numParticleDataPlot = 0
+        self.__particleDataOrigins = []
+        self.__numParDataOrigins = 0
+        # (Misc.)
         self.__plotTypes = []
         self.__numPlotTypes = 0
         self.__plotSeveralTypes = True
@@ -292,8 +305,8 @@ class PlotGSMInputFile:
 
     def __plotSimLines(self):
         """Plots all lines desired by the user"""
-        __validPlotTypes = ("doubledif", "angleint", "energyint")
-        __plotTypeName = ("double differential", "angle integrated", "energy integrated")
+        __validPlotTypes = ("doubledif", "angleint", "energyint", "energysp")
+        __plotTypeName = ("double differential", "angle integrated", "energy integrated", "energy spectrum")
         __numValidPlotTypes = len(__validPlotTypes)
 
         # Ensure the the number of legend labels matches the sim. objects:
@@ -400,11 +413,32 @@ class PlotGSMInputFile:
                                 self.__write.message = "No data exists for %s particles at %.2f degrees." % (self.__particles[j], self.__plotAngles[k])
                                 self.__write.print(2, 2)
                                 continue
-                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l], self.__scaleSimX[l], self.__scaleSimY[1])
+                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l], self.__scaleSimX[l], self.__scaleSimY[l])
 
                         # Add plot type to distinguish:
                         if ( self.__plotSeveralTypes ):
                             self.__myPlot.addPlotType()
+
+            elif( self.__plotTypes[i].startswith(__validPlotTypes[3]) ):
+                # Plot energy spectrum for each particle requested and each type:
+                for partIndx in range(0, self.__numParticleDataPlot, 1):
+                    for origIndx in range(0, self.__numParDataOrigins, 1):
+                        for dataObj in range(0, self.__numSimObjects, 1):
+                            # Obtain histogram from the output file:
+                            theHistogram = self.__simObjects[dataObj].getParticleLabeledEnergySpectra(self.__particleDataPlot[partIndx], self.__particleDataOrigins[origIndx])
+
+                            if ( theHistogram == None ):
+                                continue
+
+                            self.__myPlot.addHistogram(theHistogram.queryBinBounds(),
+                            theHistogram.queryYValues(), self.__simLabels[dataObj],
+                            self.__scaleSimX[dataObj], self.__scaleSimY[dataObj])
+
+
+                        if ( self.__plotSeveralTypes ):
+                            self.__myPlot.addPlotType()
+
+
 
         return
 
@@ -706,8 +740,21 @@ class PlotGSMInputFile:
                         self.__latexParticleID.append( self.__validLaTeXParticles[particleIndx] )
                         self.__numParticles += 1
                     else:
-                        self.__write.message = "Invalid particle identifier found: %s" % (newParticles[i])
-                        self.__write.print(1, 2)
+                        # Check if particle in particleData array:
+                        validParticle = False
+                        particleIndx = 0
+                        for j in range(0, self.__numValidParticleDataIDs, 1):
+                            if ( newParticles[i] == self.__validParticleDataIDs[j] ):
+                                particleIndx = j
+                                validParticle = True
+                                break
+                        if ( validParticle ):
+                            self.__particleDataPlot.append( self.__validParticleDataIDs[j] )
+                            self.__latexParticleData.append( self.__validLaTeXParticleDataIDS[j] )
+                            self.__numParticleDataPlot += 1
+                        else:
+                            self.__write.message = "Invalid particle identifier found: %s" % (newParticles[i])
+                            self.__write.print(1, 2)
 
         elif ( lineID == self.__plotArgs[1] ):
             # Plot given; specify plot type:
@@ -736,6 +783,13 @@ class PlotGSMInputFile:
                     angleFloat[i] = angleFloat[i] % 360
                 self.__plotAngles.append( angleFloat[i] )
                 self.__numAngles += 1
+
+        elif ( lineID == self.__plotArgs[3] ):
+            # Plot based on origin (total, cascade, etc.)
+            originFlags = fileModule.parseLine( lineFlag )
+            for i in range(0, len(originFlags), 1):
+                self.__particleDataOrigins.append( originFlags[i] )
+                self.__numParDataOrigins += 1
 
         else:
             foundFlag = False

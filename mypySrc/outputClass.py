@@ -75,7 +75,8 @@ class GSMOutput:
         self.__fileLen = 0
         self.__fileRead = False
         self.__pisaData = gsmData.DoubleDiffPISA( self.__write )
-        self.__energySpectra = gsmData.EnergySpectra( self.__write )
+        self.__particleData = []
+        self.__numParticleData = 0
 
         # Read file:
         self.__fileName = ""
@@ -98,7 +99,72 @@ class GSMOutput:
         self.__write.message = "\tParsing data..."
         self.__write.print(2, 3)
 
+        # Reduce file data:
+        for lineIndx in range(0, self.__fileLen, 1):
+            self.__fileData[lineIndx] = self.__fileData[lineIndx].lower().strip()
+
+        self.__parseParticleData()
         self.__parseDoubleDiff()
+
+        return
+
+    def __parseParticleData(self):
+        """
+        Parses out particle data for each particle in output file
+        """
+        __particleIDs = ("neutrons", "protons", "deuterons", "tritons",
+        "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
+        __numParticleIDs = len(__particleIDs)
+        __particleFlags = ("**********************************",
+        "*********************************")
+
+        # Look through data and find the particle flag; then, create object
+        #    containing all the particles data:
+        self.__write.message = "\t\tObtaining particle data..."
+        self.__write.print(2, 3)
+        for lineIndx in range(0, self.__fileLen, 1):
+
+            # Skip all lines that don't start with ***'s
+            if ( not self.__fileData[lineIndx].startswith(__particleFlags[0]) ):
+                continue
+
+            # Look for particle flag now and skip lines without the flag:
+            validPart = False
+            theParticle = None
+            for parIndx in range(0, __numParticleIDs, 1):
+                if ( __particleIDs[parIndx] in self.__fileData[lineIndx] ):
+                    validPart = True
+                    theParticle = __particleIDs[parIndx]
+            if ( not validPart ):
+                continue
+
+            # Found a particle data's next flag; create new data lines and create particle
+            parData = []
+            numConsBlanks = 0
+            findEnd = True
+            while ( True ):
+                lineIndx += 1
+                parLine = self.__fileData[lineIndx].lower().strip()
+
+                # Look for end of particle data:
+                if ( findEnd ):
+                    # Two blanks are present at end of the last particles information:
+                    if ( parLine == "" ):
+                        numConsBlanks += 1
+                    else:
+                        numConsBlanks = 0
+
+                    if ( parLine.startswith(__particleFlags[0]) or (numConsBlanks > 1) ):
+                        break
+
+                # Add data to the set:
+                parData.append( parLine )
+
+
+            # The data relating to the particle was obtained; create object:
+            self.__particleData.append( gsmData.ParticleData(theParticle, self.__write) )
+            self.__particleData[ self.__numParticleData ].addFileData( parData )
+            self.__numParticleData += 1
 
         return
 
@@ -316,6 +382,48 @@ class GSMOutput:
     def getPISAParticleHistogram(self, particleID, someAngle):
         """Returns the specific histogram associated with the particle's PISA data"""
         return ( self.__pisaData.getParticleHistogram(particleID, someAngle) )
+
+    def getParticleData(self, particleID):
+        """Returns the particle data requested, if exists"""
+        theData = None
+        for parIndx in range(0, self.__numParticleData, 1):
+            if ( particleID == self.__particleData[parIndx].queryParticleID() ):
+                theData = self.__particleData[parIndx]
+                break
+
+        if ( theData == None ):
+            self.__write.message = "No particle data exists for %s particle(s)." % particleID
+            self.__write.print(1, 2)
+
+        return theData
+
+    def getParticleEnergySpectra(self, particleID):
+        """Returns the particle data's energy spectra"""
+        energySpectra = None
+
+        theData = self.getParticleData(particleID)
+        if ( not theData == None ):
+            energySpectra = theData.queryEnergySpectra()
+
+        if ( energySpectra == None ):
+            self.__write.message = "No energy spectrum exists for %s particles." % particleID
+            self.__write.print(1, 2)
+
+        return energySpectra
+
+    def getParticleLabeledEnergySpectra(self, particleID, histLabel):
+        """Returns a histogram for the energy spectrum of the particle of some label"""
+        theHistogram = None
+
+        theESpectra = self.getParticleEnergySpectra(particleID)
+        if ( not theESpectra == None ):
+            theHistogram = theESpectra.queryHistogram(histLabel)
+
+        if ( theHistogram == None ):
+            self.__write.message = "No energy spectra histograms exist in the energy spectrum object."
+            self.__write.print(1, 2)
+
+        return theHistogram
 
 
 class CEMOutput( GSMOutput ):

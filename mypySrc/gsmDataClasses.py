@@ -46,6 +46,7 @@ import sys
 
 # MODULES:
 import generalPlotTypeClasses as genPlotCls
+from fileModule import parseLine
 from printClass import Print
 
 # VERSION Number:
@@ -488,7 +489,7 @@ class DoubleDiffPISA:
         return self.__numParticles
 
 
-class ParticleEnergySpectra( genPlotCls.Histogram ):
+class ParticleEnergySpectra:
     """The \"EnergySpectra\" class is mainly a histogram flagged by production
     type (\"Total\", \"Cascade\", \"Precompound\", and \"Total Evaporation\")
     containing a histogram for each production type for a single particle.
@@ -496,7 +497,7 @@ class ParticleEnergySpectra( genPlotCls.Histogram ):
     __particleIDs = ("neutrons", "protons", "deuterons", "tritons",
     "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
     __numParticleIDs = len(__particleIDs)
-    __histogramFlags = ("total", "cascade", "precompound", "total evaporation")
+    __histogramFlags = ("total", "cascade", "coalescence", "precompound", "evaporation")
     __numHistoFlags = len(__histogramFlags)
 
     def __init__(self, particleID, newPrint=Print() ):
@@ -545,7 +546,7 @@ class ParticleEnergySpectra( genPlotCls.Histogram ):
             # Verify histogram has a note consistent with the object:
             newHistoNote = newHistogram.queryNote().lower().strip()
             for flagIndx in range(0, self.__numHistoFlags, 1):
-                if ( newHistoNote == self.__histogramFlags[flagIndx] ):
+                if ( self.__histogramFlags[flagIndx] in newHistoNote ):
                     validHisto = True
                     break
             if ( not validHisto ):
@@ -575,7 +576,7 @@ class ParticleEnergySpectra( genPlotCls.Histogram ):
         validFlag = False
         histFlag = histFlag.lower().strip()
         for flagIndx in range(0, self.__numHistoFlags, 1):
-            if ( histFlag == self.__histogramFlags[flagIndx] ):
+            if ( self.__histogramFlags[flagIndx] in histFlag ):
                 validFlag = True
                 break
 
@@ -632,12 +633,14 @@ class ParticleData:
     def __resetMembers(self):
         """Resets all members of the object"""
         self.__particleID = None
+        self.__fileData = []
+        self.__dataLen = 0
 
         return
 
     def __resetObjects(self):
         """Resets all internal objects"""
-        self.__energySpecta = ParticleEnergySpectra( self.__particleID, self.__write)
+        self.__energySpectra = ParticleEnergySpectra( self.__particleID, self.__write)
 
         return
 
@@ -659,9 +662,169 @@ class ParticleData:
 
         return
 
+    def __parseData(self, start, end):
+        """Parses out file data from the start and end indices"""
+        __energySpecFlag = ("energy spectrum [mb/mev]", "integrated:")
+
+        if ( start < 0 ):
+            start = 0
+        if ( end > self.__dataLen ):
+            end = self.__dataLen
+
+        energyData = []
+        for lineIndx in range(start, end, 1):
+            theline = self.__fileData[lineIndx]
+
+            if ( __energySpecFlag[0] in theline ):
+                # Add energy data:
+                lineIndx += 2
+                while( True ):
+                    lineIndx += 1
+                    theline = self.__fileData[lineIndx]
+
+                    # Determine if at end of data:
+                    stopFlag = False
+                    if ( __energySpecFlag[1] in theline ):
+                        stopFlag = True
+
+                    if ( stopFlag ):
+                        break
+                    else:
+                        energyData.append( theline )
+
+                # Now create energy spectra object:
+                self.__parseEnergySpectraData(energyData)
+
+        return
+
+    def __parseEnergySpectraData(self, data):
+        """Parses out data for energy spectra"""
+
+        # Remove "MeV" from the first line:
+        header = data[0]
+        header = header[ header.find("[mev]") + len("[mev]") : ].strip()
+        if ( "pion" in self.__particleID ):
+            numHeaders = 1
+            headerFlags = ("total", "cascade")
+        else:
+            numHeaders = 4
+            if ( "neutrons" == self.__particleID or "protons" == self.__particleID ):
+                headerFlags = ("total", "cascade", "precompound", "evaporation")
+            else:
+                headerFlags = ("total", "coalescence", "precompound", "evaporation")
+
+        del data[0]
+        dataLen = len(data)
+        myBins = []
+        numBins = 0
+        numHistograms = 2 * numHeaders
+        myVals = [[] for i in range(0, numHeaders, 1)]
+        myErrs = [[] for i in range(0, numHeaders, 1)]
+        for lineIndx in range(0, dataLen, 1):
+            theline = data[lineIndx]
+
+            if ( theline == "" ):
+                break
+
+            # Get lower and upper bin bounds:
+            lowerBin = theline[ : theline.find("-") ]
+            theline = theline[ theline.find("-") + 1 : ]
+            theline = parseLine( theline )
+            upperBin = theline[0]
+            del theline[0]
+            # Remove all +/- flags:
+            delIndx = []
+            for i in range(0, len(theline), 1):
+                if ( theline[i] == "+/-" ):
+                    delIndx.append( i )
+            for i in range(len(delIndx)-1, -1, -1):
+                del theline[ delIndx[i] ]
+
+            # Convert all values to floats:
+            try:
+                lowerBin = float(lowerBin)
+            except:
+                self.__write.message = "Could not convert lower bin to float: %s" % lowerBin
+                self.__write.print(1, 2)
+                lowerBin = 0.00
+            try:
+                upperBin = float(upperBin)
+            except:
+                self.__write.message = "Could not convert lower bin to float: %s" % upperBin
+                self.__write.print(1, 2)
+                upperBin = 0.00
+            for i in range(0, len(theline), 1):
+                try:
+                    theline[i] = float(theline[i])
+                except:
+                    self.__write.message = "Could not convert lower bin to float: %s" % theline[i]
+                    self.__write.print(1, 2)
+                    theline[i] = 0.00
+
+            # Set bin values:
+            if ( numBins == 0 ):
+                myBins.append( lowerBin )
+            else:
+                if ( not lowerBin == myBins[numBins] ):
+                    # Gap in histogram; add bin and values:
+                    myBins.append( lowerBin )
+                    numBins += 1
+
+                    for valIndx in range(0, numHeaders, 1):
+                        myVals[valIndx].append( 0.00 )
+                        myErrs[valIndx].append( 0.00 )
+            myBins.append( upperBin )
+            numBins += 1
+
+            # Set histogram values:
+            for histIndx in range(0, numHeaders, 2):
+                myVals[histIndx].append( theline[histIndx] )
+                myErrs[histIndx].append( theline[histIndx] )
+
+        # Now set histograms (bins and values exist)
+        for histIndx in range(0, numHeaders, 1):
+            # Create histogram object with desired label:
+            parHist = genPlotCls.Histogram(myBins, myVals[histIndx], headerFlags[histIndx], self.__write)
+            errHist = genPlotCls.Histogram(myBins, myErrs[histIndx], "d" + headerFlags[histIndx], self.__write)
+            self.__energySpectra.addHistogram( parHist )
+            self.__energySpectra.addHistogram( errHist )
+
+        return
+
+    def addFileData(self, fileData):
+        """Adds data to the file and parses it"""
+        if ( not isinstance(fileData, list) ):
+            self.__write.message = "File data must be a list of strings. Cannot parse data."
+            self.__write.print(1, 2)
+            return
+
+        # Reduce file data:
+        startingIndx = self.__dataLen
+        for lineIndx in range(0, len(fileData), 1):
+            fileData[lineIndx] = fileData[lineIndx].lower().strip()
+            self.__fileData.append( fileData[lineIndx] )
+            self.__dataLen += 1
+        endingIndx = self.__dataLen
+
+        self.__parseData(startingIndx, endingIndx)
+
+        return
+
     def queryParticleID(self):
         """Returns the particle ID to client"""
         return self.__particleID
+
+    def queryEnergySpectra(self):
+        """Returns the energy spectra object"""
+        return self.__energySpectra
+
+    def queryEnergySpectraHistogram(self, label):
+        """Returns the energy spectrum for the particle with a specific label"""
+        theHistogram = self.__energySpectra.queryHistogram(label)
+        if ( theHistogram == None ):
+            self.__write.message = "No %s energy spectrum histogram exists for particle %s." % (label, self.__particleID)
+            self.__write.print(1, 2)
+        return theHistogram
 
     def parseFileData(self, newFileData ):
         """Parses the information given lines of a file"""
