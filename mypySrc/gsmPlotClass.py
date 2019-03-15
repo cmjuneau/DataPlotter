@@ -31,10 +31,12 @@ import fileModule
 __version__ = "1.0.0"
 
 
-
-class PlotGSMInputFile:
-    """Reads an input file and sets values based on input specification."""
-    # Input arguments:
+class PISAPlots:
+    """Container for all PISA related plot options"""
+    __validPlotTypeFull = ("double differential", "energy integrated", "angle integrated")
+    __validPlotTypes = ("doubled", "energyi", "anglei")
+    __numValidPlotTypes = len(__validPlotTypes)
+    # Regarding valid particles:
     __validParticles = ("n", "p", "d", "t", "he3", "he4", "he6", "li6", "li7", "li8",
     "li9", "be7", "be9", "be10", "b9", "b10", "b11", "b12", "c11", "c12", "c13",
     "c14", "z=7", "z=8", "z=9", "z=10", "z=11", "z=12", "z=13", "z=14")
@@ -42,12 +44,273 @@ class PlotGSMInputFile:
     "$^{6}$He", "$^{6}$Li", "$^{7}$Li", "$^{8}$Li", "$^{9}$Li", "$^{7}$Be", "$^{9}$Be", "$^{10}$Be",
     "$^{9}$B", "$^{10}$B", "$^{11}$B", "$^{12}$B", "$^{11}$C", "$^{12}$C", "$^{13}$C", "$^{14}$C",
     "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si")
+    __numValidParticles = len(__validParticles)
+
+    def __init__(self, newPrint=Print() ):
+        """Constructor"""
+        self.__write = newPrint
+        self.__resetMembers()
+
+        return
+
+    def __del__(self):
+        """Destructor"""
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all class member-variables"""
+        # Indicates double diff, energy int., and angle int.
+        self.__plotTypes = []
+        self.__plotTypeName = []
+        self.__numPlotTypes = 0
+        # Indiciates which particles to use:
+        self.__particles = []
+        self.__partLaTeX = []
+        self.__numParticles = 0
+        # For angles (regarding double diff spectra)
+        self.__angles = []
+        self.__numAngles = 0
+
+        return
+
+    def __validateAngle(self, angle):
+        """Returns a valid angle (within range [0, 360))."""
+        __minAngle = 0
+        __maxAngle = 360
+
+        validAngle = angle
+        if ( not isinstance(angle, (int, float)) ):
+            self.__write.message = "Unable to add angle not of type int or float: ", angle
+            self.__write.print(1, 2)
+            validAngle = -1
+        else:
+            # Ensure within range [__minAngle, __maxAngle)
+            if ( validAngle < __minAngle ):
+                # Increment until valid:
+                while(True):
+                    if ( validAngle < __minAngle ):
+                        validAngle += __maxAngle
+                    else:
+                        break
+
+            if ( validAngle >= __maxAngle ):
+                validAngle = (validAngle % __maxAngle)
+
+        return validAngle
+
+    def isValidPlotType(self, newType):
+        """Checks if the plot type is valid or not within the object"""
+        isValid = False
+
+        newType = newType.lower().strip()
+        for pltIndx in range(0, self.__numValidPlotTypes, 1):
+            if ( newType.startswith(self.__validPlotTypes[pltIndx]) ):
+                isValid = True
+                break
+
+        return isValid
+
+    def isValidParticle(self, newParticle):
+        """Checks if the particle is valid for this object"""
+        isValid = False
+
+        newParticle = newParticle.lower().strip()
+        for parIndx in range(0, self.__numValidParticles, 1):
+            if ( newParticle == self.__validParticles[parIndx] ):
+                isValid = True
+                break
+
+        return isValid
+
+    def findFullPlotName(self, pltName):
+        """Returns the full plot's name"""
+        newPltName = "?"
+
+        pltName = pltName.lower().strip()
+        if ( self.isValidPlotType(pltName) ):
+            for pltIndx in range(0, self.__numValidPlotTypes, 1):
+                if ( pltName.startswith(self.__validPlotTypes[pltIndx]) ):
+                    newPltName = self.__validPlotTypeFull[pltIndx]
+                    break
+
+        return newPltName
+
+    def findParLaTeX(self, newParticle):
+        """Returns the LaTeX version of the particle"""
+        parLaTeX = "?"
+
+        newParticle = newParticle.lower().strip()
+        if ( self.isValidParticle(newParticle) ):
+            for parIndx in range(0, self.__numValidParticles, 1):
+                if ( newParticle == self.__validParticles[parIndx] ):
+                    parLaTeX = self.__validLaTeXParticles[parIndx]
+                    break
+
+        return parLaTeX
+
+    def addPlotType(self, newType):
+        """Adds a plot type"""
+        newType = newType.lower().strip()
+        if ( self.isValidPlotType(newType) ):
+            self.__plotTypes.append( newType )
+            self.__plotTypeName.append( self.findFullPlotName(newType) )
+            self.__numPlotTypes += 1
+        else:
+            self.__write.message = "Cannot add an invalid plot type to the PISA object: %s" % (newType)
+            self.__write.print(1, 2)
+
+        return
+
+    def addParticle(self, newParticle):
+        """Adds a particle to the object"""
+
+        newParticle = newParticle.lower().strip()
+        if ( self.isValidParticle(newParticle) ):
+            self.__particles.append( newParticle )
+            self.__partLaTeX.append( self.findParLaTeX(newParticle) )
+            self.__numParticles += 1
+        else:
+            self.__write.message = "An invalid particle cannot be added to the PISA object: %s" % newParticle
+            seslf.__write.print(1, 2)
+
+        return
+
+    def addAngle(self, newAngle):
+        """Validates and adds a new angle(s) to the PISA object"""
+        newAngles = []
+        if ( not isinstance(newAngle, (int, float) ) ):
+            # Convert to float or int:
+            if ( isinstance(newAngle, (list, tuple)) ):
+                # Add values to the newAngles list
+                for indx in range(0, len(newAngle), 1):
+                    newAngles.append( newAngles[indx] )
+            else:
+                newAngles.append( newAngle )
+
+            for indx in range(0, len(newAngles), 1):
+                try:
+                    theAngle = float(newAngles[indx])
+                except:
+                    self.__write.message = "Unable to convert value to float: ", newAngles[indx]
+                    self.__write.print(1, 2)
+                    theAngle = None
+
+                if ( theAngle is not None ):
+                    theAngle = self.__validateAngle(theAngle)
+                    self.__angles.append( theAngle )
+                    self.__numAngles += 1
+        else:
+            newAngle = self.__validateAngle(newAngle)
+            self.__angles.append( newAngle )
+            self.__numAngles += 1
+
+        return
+
+    def queryNumPlotTypes(self):
+        """Returns the number of plot types that exist"""
+        return self.__numPlotTypes
+
+    def queryPlotTypes(self, indx = None):
+        """Returns the plot types or a single type if a valid index is given"""
+        plotTypes = self.__plotTypes
+
+        if ( indx is not None and isinstance(indx, (int, float)) ):
+            # Return a specific value:
+            if ( indx >= 0 and indx < self.__numPlotTypes ):
+                plotTypes = self.__plotTypes[indx]
+            else:
+                self.__write.message = "Invalid index (%d) for obtaining plot type values." % indx
+                self.__write.print(1, 2)
+
+        return plotTypes
+
+    def queryPlotTypeNames(self, indx = None):
+        """Returns the plot type full names or a single full name if a valid index is given"""
+        pltName = self.__plotTypeName
+
+        if ( indx is not None and isinstance(indx, (int, float)) ):
+            # Return a specific value:
+            if ( indx >= 0 and indx < self.__numPlotTypes ):
+                pltName = self.__plotTypeName[indx]
+            else:
+                self.__write.message = "Invalid index (%d) for obtaining plot type name." % indx
+                self.__write.print(1, 2)
+
+        return pltName
+
+    def queryNumParticles(self):
+        """Returns the number of particles"""
+        return self.__numParticles
+
+    def queryParticles(self, indx = None ):
+        """Returns the list of particles or a single particle if avalid index is given"""
+        theParticles = self.__particles
+
+        if ( indx is not None and isinstance(indx, (int, float)) ):
+            if ( indx >= 0 and indx < self.__numParticles ):
+                theParticles = self.__particles[indx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the PISA particles." % indx
+                self.__write.print(1, 2)
+
+        return theParticles
+
+    def queryParticleLaTeX(self, indx = None ):
+        """Returns the LaTeX list of particles or a single particle if avalid index is given"""
+        theParticles = self.__partLaTeX
+
+        if ( indx is not None and isinstance(indx, (int, float)) ):
+            if ( indx >= 0 and indx < self.__numParticles ):
+                theParticles = self.__partLaTeX[indx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the PISA LaTeX particles." % indx
+                self.__write.print(1, 2)
+
+        return theParticles
+
+    def queryNumAngles(self):
+        """Returns the number of angles to be used"""
+        return self.__numAngles
+
+    def queryAngles(self, indx = None ):
+        """Returns the list of angles or a single angle if avalid index is given"""
+        theAngles = self.__angles
+
+        if ( indx is not None and isinstance(indx, (int, float)) ):
+            if ( indx >= 0 and indx < self.__numAngles ):
+                theAngles = self.__angles[indx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the PISA angles." % indx
+                self.__write.print(1, 2)
+
+        return theAngles
+
+    def recommendLineScaling(self):
+        """Returns whether or not lines should be scaled"""
+        recommended = False
+        if ( self.__numAngles > 1 or self.__numParticles > 1 ):
+            recommended = True
+
+        return recommended
+
+    def recommendMultiplePlots(self):
+        """Returns whether or not multiple plots were requested to be plotted"""
+        recommended = False
+        if ( self.__numPlotTypes > 1 ):
+            recommended = True
+
+        return recommended
+
+
+class PlotGSMInputFile:
+    """Reads an input file and sets values based on input specification."""
+    # Input arguments:
     __validParticleDataIDs = ("neutrons", "protons", "deuterons", "tritons",
     "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
     __validLaTeXParticleDataIDS = ("Neutron", "Proton", "Deuterium", "Tritium", "$^{3}$He", "$^{4}$He",
     "$\pi^{-}$", "$\pi^{0}$", "$\pi^{+}$")
     __numValidParticleDataIDs = len(__validParticleDataIDs)
-    __numParticleNames = len(__validParticles)
     __fileCommentFlag = "#"
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
@@ -89,13 +352,14 @@ class PlotGSMInputFile:
         self.__fileWasRead = True
 
         # Parse out information in the file:
+        self.__myPlot = PlotClass(True, self.__write)
         self.__parseInput()
 
         return
 
     def __del__(self):
         """Destructor for the \"PlotInputFile\" class"""
-        self.__resetMembers()
+        # self.__resetMembers()
 
         return
 
@@ -140,10 +404,16 @@ class PlotGSMInputFile:
         """Resets all plot-specific variables"""
 
         # Reset all others:
+        self.__resetPlotObj()
         self.__resetAnnotations()
         self.__resetAxis()
         self.__resetOther()
 
+        return
+
+    def __resetPlotObj(self):
+        """Resets the plot object"""
+        self.__myPlot = PlotClass(True, self.__write)
         return
 
     def __resetAnnotations(self):
@@ -192,11 +462,7 @@ class PlotGSMInputFile:
 
         # Regarding what to plot:
         # (PISA)
-        self.__particles = []
-        self.__latexParticleID = []
-        self.__numParticles = 0
-        self.__plotAngles = []
-        self.__numAngles = 0
+        self.__pisa = PISAPlots(self.__write)
         # (Particle Data)
         self.__particleDataPlot = []
         self.__latexParticleData = []
@@ -211,6 +477,13 @@ class PlotGSMInputFile:
         # Misc information:
         self.__figDPI = 1200
         self.__showPlot = False
+
+        return
+
+    def __saveAndClearPlot(self):
+        """Clears the plot object of all lines"""
+        self.applyPlotSpecificsAndSaveShow()
+        self.__resetAxis()
 
         return
 
@@ -253,7 +526,7 @@ class PlotGSMInputFile:
         """Plots all lines desired by the user"""
 
         # Turn off multiple plots if they weren't specified:
-        if ( self.__numPlotTypes <= 1 and self.__numParticles <= 1 and self.__numAngles <= 1 ):
+        if ( not self.__pisa.recommendLineScaling() and not self.__pisa.recommendMultiplePlots() ):
             self.__plotSeveralTypes = False
             self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
 
@@ -305,8 +578,8 @@ class PlotGSMInputFile:
 
     def __plotSimLines(self):
         """Plots all lines desired by the user"""
-        __validPlotTypes = ("doubledif", "angleint", "energyint", "energysp")
-        __plotTypeName = ("double differential", "angle integrated", "energy integrated", "energy spectrum")
+        __validPlotTypes = ("energysp")
+        __plotTypeName = ("energy spectrum")
         __numValidPlotTypes = len(__validPlotTypes)
 
         # Ensure the the number of legend labels matches the sim. objects:
@@ -324,6 +597,12 @@ class PlotGSMInputFile:
                 self.__scaleSimY.append( self.__defaultYScaling )
                 self.__numSimScale += 1
 
+
+        # Apply PISA plot(s):
+        if ( self.__pisa.queryNumPlotTypes() >= 1 ):
+            self.__plotPISA()
+
+
         for i in range(0, self.__numPlotTypes, 1):
             # Validate plot type, otherwise continue:
             validPlotType = False
@@ -338,107 +617,130 @@ class PlotGSMInputFile:
                 self.__write.print(1, 2)
                 continue
 
+            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
+                self.__plotEnergySpectrum()
 
-            # Set angle/plot type for PISA angle/energy intergrated data (stored at angle=361, 362, respectively)
-            if ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
-                # Set to doublediff and apply angle
-                if ( self.__numAngles > 0 ):
-                    self.__write.message = "Unable to plot angles with %s spectra. Clearing all angles..." % (__plotTypeName[plotTypeIndx])
-                    self.__write.print(1, 2)
-                self.__plotAngles = []
-                self.__plotAngles.append( 361 )
-                self.__numAngles = len( self.__plotAngles )
-            elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
-                # Set to doublediff and apply angle
-                if ( self.__numAngles > 0 ):
-                    self.__write.message = "Unable to plot angles with %s spectra. Clearing all angles..." % (__plotTypeName[plotTypeIndx])
-                    self.__write.print(1, 2)
-                self.__plotAngles = []
-                self.__plotAngles.append( 362 )
-                self.__numAngles = len( self.__plotAngles )
+        return
 
-            # Apply plot:
-            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) or
-            self.__plotTypes[i].startswith(__validPlotTypes[1]) or
-            self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
-                # Plot PISA double differential cross sections:
-                self.__write.message = "Plotting %s PISA predictions..." % (__plotTypeName[plotTypeIndx])
-                self.__write.print(2, 2)
+    def __plotPISA(self):
+        """Plots all PISA data"""
+        __validPlotTypes = ("doubled", "anglei", "energyi")
 
-                # Determine X/Y/Title for plot labeling:
-                if ( self.__xLabel == None ):
-                    if ( self.__numParticles == 1 ):
-                        self.__xLabel = self.__latexParticleID[0]
-                    else:
-                        self.__xLabel = "Particle"
-                    self.__xLabel += " Energy [MeV]"
-                if ( self.__yLabel == None ):
-                    self.__yLabel = "Cross Section"
-                    if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
-                        self.__yLabel += " [mb/sr/MeV]"
-                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
-                        self.__yLabel += " [mb/MeV]"
-                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
-                        self.__yLabel += " [mb/sr]"
-                if ( self.__plotTitle == None ):
-                    if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
-                        self.__plotTitle = "Double Differential Spectra"
-                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[1]) ):
-                        self.__plotTitle = "Angle Integrated Spectra"
-                    elif ( self.__plotTypes[i].startswith(__validPlotTypes[2]) ):
-                        self.__plotTitle = "Energy Integrated Spectra"
-                    if ( self.__numParticles == 1 ):
-                        self.__plotTitle += " (" + self.__latexParticleID[0]
-                    if ( self.__numAngles == 1 and self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
-                        self.__plotTitle += " at %.0f$^{\\circ}$)" % (self.__plotAngles[0])
-                    else:
-                        self.__plotTitle += ")"
+        for typeIndx in range(0, self.__pisa.queryNumPlotTypes(), 1):
 
-                for j in range(0, self.__numParticles, 1):
-                    for k in range(0, self.__numAngles, 1):
-                        for l in range(0, self.__numSimObjects, 1):
-                            # Obtain histogram for each sim. object:
-                            thePISAData = self.__simObjects[l].getPISAData()
-                            if ( thePISAData == None ):
-                                self.__write.message = "No PISA data exists in the simulation file."
-                                self.__write.print(2, 2)
-                                continue
-                            theParticle = thePISAData.getParticle(self.__particles[j])
-                            if ( theParticle == None ):
-                                self.__write.message = "Data for the %s particle does not exist in the sim file." % (self.__particles[j])
-                                self.__write.print(2, 2)
-                                continue
-                            theHistogram = theParticle.getHistogram( self.__plotAngles[k] )
-                            if ( theHistogram == None ):
-                                self.__write.message = "No data exists for %s particles at %.2f degrees." % (self.__particles[j], self.__plotAngles[k])
-                                self.__write.print(2, 2)
-                                continue
-                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[l], self.__scaleSimX[l], self.__scaleSimY[l])
+            pltType = self.__pisa.queryPlotTypes(typeIndx)
+            pltTypeName = self.__pisa.queryPlotTypeNames(typeIndx)
 
-                        # Add plot type to distinguish:
-                        if ( self.__plotSeveralTypes ):
-                            self.__myPlot.addPlotType()
+            # Write to user:
+            self.__write.message = "Plotting %s PISA predictions..." % (pltTypeName)
+            self.__write.print(2, 2)
 
-            elif( self.__plotTypes[i].startswith(__validPlotTypes[3]) ):
-                # Plot energy spectrum for each particle requested and each type:
-                for partIndx in range(0, self.__numParticleDataPlot, 1):
-                    for origIndx in range(0, self.__numParDataOrigins, 1):
-                        for dataObj in range(0, self.__numSimObjects, 1):
-                            # Obtain histogram from the output file:
-                            theHistogram = self.__simObjects[dataObj].getParticleLabeledEnergySpectra(self.__particleDataPlot[partIndx], self.__particleDataOrigins[origIndx])
+            # Determine X/Y/Title for plot labeling:
+            if ( self.__xLabel == None ):
+                if ( self.__pisa.queryNumParticles() == 1 ):
+                    self.__xLabel = self.__pisa.queryParticleLaTeX(0)
+                else:
+                    self.__xLabel = "Particle"
+                self.__xLabel += " Energy [MeV]"
+            if ( self.__yLabel == None ):
+                self.__yLabel = "Cross Section"
+                if ( pltType.startswith(__validPlotTypes[0]) ):
+                    self.__yLabel += " [mb/sr/MeV]"
+                elif ( pltType.startswith(__validPlotTypes[1]) ):
+                    self.__yLabel += " [mb/MeV]"
+                elif ( pltType.startswith(__validPlotTypes[2]) ):
+                    self.__yLabel += " [mb/sr]"
+            if ( self.__plotTitle == None ):
+                if ( pltType.startswith(__validPlotTypes[0]) ):
+                    self.__plotTitle = "Double Differential Spectra"
+                    if (   self.__pisa.queryNumParticles()  > 1 and self.__pisa.queryNumAngles() == 1 ):
+                        self.__plotTitle += " (at %.0f$^{\\circ}$)" % ( self.__pisa.queryAngles(0) )
+                    elif ( self.__pisa.queryNumParticles() == 1 and self.__pisa.queryNumAngles() == 1 ):
+                        self.__plotTitle += " (%s at %.0f$^{\\circ}$)" % ( self.__pisa.queryParticleLaTeX(0), self.__pisa.queryAngles(0) )
+                    elif ( self.__pisa.queryNumParticles() == 1 and self.__pisa.queryNumAngles()  > 1 ):
+                        self.__plotTitle += " (%s)" % ( self.__pisa.queryParticleLaTeX(0) )
+                elif ( pltType.startswith(__validPlotTypes[1]) ):
+                    self.__plotTitle = "Angle Integrated Spectra"
+                elif ( pltType.startswith(__validPlotTypes[2]) ):
+                    self.__plotTitle = "Energy Integrated Spectra"
 
-                            if ( theHistogram == None ):
-                                continue
+            # Set angle information:
+            numAngles = self.__pisa.queryNumAngles()
+            theAngles = self.__pisa.queryAngles()
+            if ( not pltType.startswith(__validPlotTypes[0]) ):
+                # Use only one angle (361 or 362) for energy/angle integrated plots:
+                if ( pltType.startswith(__validPlotTypes[1]) ):
+                    theAngles = [361]
+                else:
+                    theAngles = [362]
+                numAngles = 1
 
-                            self.__myPlot.addHistogram(theHistogram.queryBinBounds(),
-                            theHistogram.queryYValues(), self.__simLabels[dataObj],
-                            self.__scaleSimX[dataObj], self.__scaleSimY[dataObj])
+            # Loop over various angles/particles now:
+            for parIndx in range(0, self.__pisa.queryNumParticles(), 1):
+                theParticle = self.__pisa.queryParticles(parIndx)
+                theParticleLaTeX = self.__pisa.queryParticleLaTeX(parIndx)
 
+                for angIndx in range(0, numAngles, 1):
+                    # Use special angles for angle/energy integrated spectra:
+                    theAngle = theAngles[angIndx]
+                    for simIndx in range(0, self.__numSimObjects, 1):
+                        # Obtain histogram for each sim. object:
+                        theHistogram = self.__simObjects[simIndx].getPISAParticleHistogram(theParticle, theAngle)
 
-                        if ( self.__plotSeveralTypes ):
-                            self.__myPlot.addPlotType()
+                        if ( theHistogram is not None ):
+                            self.__myPlot.addHistogram(theHistogram.getBinValues(), theHistogram.getDataPoints(), self.__simLabels[simIndx], self.__scaleSimX[simIndx], self.__scaleSimY[simIndx])
+                        else:
+                            self.__write.message = "No PISA histogram exists for the specified plot of %s particles." % theParticleLaTeX
 
+                    # Add plot type to distinguish:
+                    if ( self.__plotSeveralTypes and numAngles > 1):
+                        self.__myPlot.addPlotType()
 
+                # Add plot type to distinguish:
+                if ( self.__plotSeveralTypes and self.__pisa.queryNumParticles() > 1):
+                    self.__myPlot.addPlotType()
+
+            # Save plot and create new figure object to save:
+            if ( self.__pisa.queryNumPlotTypes() > 1 ):
+                self.__override = False
+            self.__saveAndClearPlot()
+
+        return
+
+    def __plotEnergySpectrum(self):
+        """Plots the energy spectrum given the input"""
+
+        self.__write.message = "Creating energy spectrum plot..."
+        self.__write.print(2, 2)
+
+        # Plot energy spectrum for each particle requested and each type:
+        for partIndx in range(0, self.__numParticleDataPlot, 1):
+            theParticle = self.__particleDataPlot[partIndx]
+            for origIndx in range(0, self.__numParDataOrigins, 1):
+                theOrigin = self.__particleDataOrigins[origIndx]
+                for dataObj in range(0, self.__numSimObjects, 1):
+                    # Obtain histogram from the output file:
+                    theHistogram = self.__simObjects[dataObj].getParticleLabeledEnergySpectra(theParticle, theOrigin)
+
+                    if ( theHistogram == None ):
+                        continue
+
+                    if ( theHistogram.queryLargestValue() <= 0.00 ):
+                        self.__write.message = "No %s values exist for %s particles." % (theOrigin, theParticle)
+                        self.__write.print(1, 2)
+                        continue
+
+                    self.__myPlot.addHistogram(theHistogram.queryBinBounds(),
+                    theHistogram.queryYValues(), self.__simLabels[dataObj],
+                    self.__scaleSimX[dataObj], self.__scaleSimY[dataObj])
+
+                if ( self.__plotSeveralTypes and self.__numParDataOrigins > 1 ):
+                    self.__myPlot.addPlotType()
+
+            if ( self.__plotSeveralTypes and self.__numParticleDataPlot > 1 ):
+                self.__myPlot.addPlotType()
+
+        self.__saveAndClearPlot()
 
         return
 
@@ -515,7 +817,7 @@ class PlotGSMInputFile:
         self.__write.print(2, 1)
 
         # Create new plot class object:
-        self.__myPlot = PlotClass(True, self.__write)
+        self.__resetPlotObj()
 
         return
 
@@ -718,7 +1020,7 @@ class PlotGSMInputFile:
 
     def __applyPlotArgs(self, lineID, lineFlag):
         """Checks if the input has flag from the __plotArgs tuple"""
-        # __plotArgs = ("particle", "plot", "angle")
+        # __plotArgs = ("particle", "plot", "angle". "origin")
         foundFlag = True
 
         if ( lineID == self.__plotArgs[0] ):
@@ -727,18 +1029,10 @@ class PlotGSMInputFile:
             if ( len(newParticles) > 0 ):
                 for i in range(0, len(newParticles), 1):
                     # Ensure particle name is valid:
-                    validParticle = False
-                    particleIndx = 0
-                    for j in range(0, self.__numParticleNames, 1):
-                        if ( newParticles[i] == self.__validParticles[j] ):
-                            validParticle = True
-                            particleIndx = j
-                            break
+                    validParticle = self.__pisa.isValidParticle( newParticles[i] )
 
                     if ( validParticle ):
-                        self.__particles.append( newParticles[i] )
-                        self.__latexParticleID.append( self.__validLaTeXParticles[particleIndx] )
-                        self.__numParticles += 1
+                        self.__pisa.addParticle( newParticles[i] )
                     else:
                         # Check if particle in particleData array:
                         validParticle = False
@@ -761,8 +1055,13 @@ class PlotGSMInputFile:
             plotTypes = fileModule.parseLine( lineFlag.strip().lower() )
             if ( len(plotTypes) > 0 ):
                 for i in range(0, len(plotTypes), 1):
-                    self.__plotTypes.append( plotTypes[i] )
-                    self.__numPlotTypes += 1
+                    isValid = self.__pisa.isValidPlotType( plotTypes[i] )
+
+                    if ( isValid ):
+                        self.__pisa.addPlotType( plotTypes[i] )
+                    else:
+                        self.__plotTypes.append( plotTypes[i] )
+                        self.__numPlotTypes += 1
 
         elif ( lineID == self.__plotArgs[2] ):
             # Plot given angle:
@@ -776,13 +1075,7 @@ class PlotGSMInputFile:
                     self.__write.print(1, 2)
 
             for i in range(0, len(angleFloat), 1):
-                if ( angleFloat[i] < 0 ):
-                    angleFloat[i] += 360
-                    print("Is there a better way to do this?")
-                elif ( angleFloat[i] >= 360 ):
-                    angleFloat[i] = angleFloat[i] % 360
-                self.__plotAngles.append( angleFloat[i] )
-                self.__numAngles += 1
+                self.__pisa.addAngle( angleFloat[i] )
 
         elif ( lineID == self.__plotArgs[3] ):
             # Plot based on origin (total, cascade, etc.)
@@ -1103,6 +1396,13 @@ class PlotGSMInputFile:
         # Plot all lines requested:
         self.__plotLines()
 
+        # Create new plot object:
+        self.__newPlot()
+
+        return
+
+    def applyPlotSpecificsAndSaveShow(self):
+        """Applies plot labels, axes, and annotations"""
         # Setup the plot's characteristics:
         self.__applyPlotLabels()
         self.__applyAxisDetails()
@@ -1117,8 +1417,6 @@ class PlotGSMInputFile:
             self.__write.message = "The plot is not being saved or shown (as the input specified)."
             self.__write.print(1, 2)
 
-
-        # Create new plot object:
-        self.__newPlot()
+        self.__resetPlotObj()
 
         return

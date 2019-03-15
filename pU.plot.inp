@@ -3,27 +3,29 @@
 # =====================================
 comment Some comment about the plot.
 #
-c Data Arguments:
+c Data Files (sim, exp):
 c ----------------------------------
-# data someDataFile.dat
-sim pBe.g.out
 # sim pU.g.out
 # sim pU.c.out
-simLabel GSM CEM
+# simLabel GSM CEM
+# data He4at90.dat
+# dataLabel Exp. Data (at $90^{\circ}$)
+sim pBe.g.out
+simLabel GSM
 #
 c Plot Type Arguments:
 c ----------------------------------
-plot energyspectrum
-particle neutrons
-angle 90
-origin total
-# data He4at90.dat
-# dataLabel Exp. Data (at $90^{\circ}$)
+# plot doublediff energyint angleint
+# particle n he4
+# angle 60 90
+# plot energyspectrum
+# particle neutrons
+# origin total cascade coalescence precompound evaporation
 #
 c Annotation Arguments:
 c ----------------------------------
-annotate $^{238}$U (5.5~GeV p, X) $^{4}$He
-annotatePos 10 2.0E-02
+# annotate $^{238}$U (5.5~GeV p, X) n
+# annotatePos 10 2.0E-02
 # otherAnnotate neutrons
 # otherAnnotatePos 110 1.0E+01
 # otherAnnotate protons ($\times 10^{-2}$)
@@ -35,7 +37,7 @@ c ----------------------------------
 save zTemp
 dpi 1200
 # show True
-override True
+# override True
 #
 c Axis Limits:
 c ----------------------------------

@@ -70,8 +70,7 @@ class _BaseFigure:
 
     def __del__(self):
         """Destructor for the object"""
-        del self.__axis
-        del self.__figure
+        return
 
 
 # Controls the Plot classes axis info (labels, titles, annotations)
@@ -1154,12 +1153,14 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Only use first few labels:
         if ( self.__numPlotTypes > 0 ):
-            myLabel = None
+            theLabel = None
+        else:
+            theLabel = myLabel
 
         if ( not self.__useOwnHistPlot ):
             # Plot histogram:
             self._BaseFigure__axis.hist(plottedValues, bins=plottedBins,
-            histtype='step', color=self.__getLineColor(), label=myLabel)
+            histtype='step', color=self.__getLineColor(), label=theLabel)
             self.__addedLine()
 
         else:
@@ -1260,15 +1261,17 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Remove legend label if desired:
         if ( self.__numPlotTypes > 0 ):
-            myLabel = None
+            theLabel = None
+        else:
+            theLabel = myLabel
 
         # X/Y values are all valid; create line:
         if ( self._AxisLimits__yScale == self._AxisLimits__validScales[0] ):
             self._BaseFigure__axis.plot( xCoord, yCoord, linestyle=thisLineStyle,
-            color=thisLineColor, alpha=self.__opacity, label=myLabel)
+            color=thisLineColor, alpha=self.__opacity, label=theLabel)
         else:
             self._BaseFigure__axis.semilogy( xCoord, yCoord, linestyle=thisLineStyle,
-            color=thisLineColor, alpha=self.__opacity, label=myLabel)
+            color=thisLineColor, alpha=self.__opacity, label=theLabel)
 
         # Add legend entry for first few lines (w/ multiple plots)
         self.__addedLine()
@@ -1319,7 +1322,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Remove legend label if desired:
         if ( self.__numPlotTypes > 0 and not expData ):
-            myLabel = None
+            theLabel = None
+        else:
+            theLabel = myLabel
 
         # Obtain what will be the line's properties:
         if ( expData ):
@@ -1329,7 +1334,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         theMarker = self.__getMarker()
 
         self._BaseFigure__axis.scatter(xVals, yVals, s=60, marker=theMarker,
-        edgecolors=theColor, facecolors='none', linewidth=1.5, label=myLabel,
+        edgecolors=theColor, facecolors='none', linewidth=1.5, label=theLabel,
         alpha=0.5)
 
         # Add plot if not experimental data:
@@ -1382,7 +1387,9 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         # Remove legend label if desired:
         if ( self.__numPlotTypes > 0 and not expData ):
-            myLabel = None
+            theLabel = None
+        else:
+            theLabel = myLabel
 
         # Obtain what will be the line's properties:
         if ( expData ):
@@ -1393,12 +1400,17 @@ class PlotClass(_PlotLabeling, _AxisLimits):
 
         self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
         marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
-        mfc='none', linewidth=0, label=myLabel)
+        mfc='none', linewidth=0, label=theLabel)
 
         # Add plot if not experimental data:
         if ( not expData ):
             self.__addedLine()
 
+        return
+
+    def clearLines(self):
+        """Clears all lines from the current plot"""
+        self._BaseFigure__axis.lines = []
         return
 
     # For finishing a plot:
@@ -1432,7 +1444,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         self.finalizePlot()
 
         # Skip plotting if nothing exists on the plot:
-        if ( self.__totNumPlottedLines <= 0 and False ):
+        if ( self.__totNumPlottedLines <= 0 ):
             # No plots or types created; warn client
             self.__write.message = "Plot contains no lines. Plot will not be saved."
             self.__write.print(1, 2)

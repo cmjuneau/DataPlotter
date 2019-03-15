@@ -251,6 +251,14 @@ class Histogram:
         """Returns the note stored in the histogram object"""
         return self.__note
 
+    def queryLargestValue(self):
+        """Returns the largest value in the histogram"""
+        maxVal = -float("inf")
+        for indx in range(0, self.__numYValues, 1):
+            maxVal = max(maxVal, self.__yValues[indx])
+
+        return maxVal
+
 
 class Scatter:
     """
