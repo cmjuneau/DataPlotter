@@ -74,9 +74,13 @@ class GSMOutput:
         self.__fileData = []
         self.__fileLen = 0
         self.__fileRead = False
+        # PISA:
         self.__pisaData = gsmData.DoubleDiffPISA( self.__write )
+        # Particle data:
         self.__particleData = []
         self.__numParticleData = 0
+        # Yield data:
+        self.__yieldData = gsmData.ParticleYields( self.__write )
 
         # Read file:
         self.__fileName = ""
@@ -178,8 +182,12 @@ class GSMOutput:
            Charge yields (mb)
            More can be added easily
         """
-        __yieldStartFlag = ("yields of different channels (with > 1 mb):")
-        __yieldEndFlag = ("**********************************")
+        __yieldFlags = ("yields of different channels (with > 1 mb):",
+        "*************** nuclide yields [mb]  (zero values suppressed) *****************",
+        "mass yield [mb] and the mean and variance of the kinetic energy [mev]",
+        "charge yield [mb] and the mean and variance of the  kinetic energy [mev]")
+        __numYieldFlags = len(__yieldFlags)
+        __yieldEndFlag = "**********************************"
 
         self.__write.message = "\t\tObtaining yield data..."
         self.__write.print(2, 3)
@@ -187,30 +195,34 @@ class GSMOutput:
         # Look through file data for the start/end flags:
         for lineIndx in range(0, self.__fileLen, 1):
 
-            # Skip all lines that don't start with ***'s
-            if ( not self.__fileData[lineIndx].startswith(__yieldStartFlag[0]) ):
+            # Skip all lines that don't flag yield data
+            dataFlagged = False
+            for flagIndx in range(0, __numYieldFlags, 1):
+                if ( self.__fileData[lineIndx].startswith(__yieldFlags[flagIndx]) ):
+                    dataFlagged = True
+                    break
+            if ( not dataFlagged ):
                 continue
 
             # Found the start of the yield section; obtain data:
-            print( self.__fileData[lineIndx])
             yieldData = []
+            yieldData.append( self.__fileData[lineIndx].lower().strip() )
             while ( True ):
                 lineIndx += 1
+                if ( lineIndx >= self.__fileLen ):
+                    break
                 dataLine = self.__fileData[lineIndx].lower().strip()
 
                 # Look for end of yield data:
-                if ( dataLine.startswith(__yieldEndFlag[0]) ):
-                    print(dataLine)
+                if ( dataLine.startswith(__yieldEndFlag) ):
                     break
 
                 # Add data to the set:
                 yieldData.append( dataLine )
 
-
             # The data relating to the particle was obtained; create object:
-            self.__particleData.append( gsmData.ParticleData(theParticle, self.__write) )
-            self.__particleData[ self.__numParticleData ].addFileData( parData )
-            self.__numParticleData += 1
+            self.__yieldData.addFileData( yieldData )
+            break
 
         return
 
@@ -470,6 +482,46 @@ class GSMOutput:
             self.__write.print(1, 2)
 
         return theHistogram
+
+    def queryYieldData(self):
+        """Returns the yield data to the user/client"""
+        yieldData = self.__yieldData
+        if ( yieldData is None ):
+            self.__write.message = "Cannot query: no yield data was present in the file."
+            self.__write.print(1, 2)
+        return yieldData
+
+    def queryChannelYields(self):
+        """Returns the channel yield found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryChannelYields()
+        return userData
+
+    def queryNuclideYields(self):
+        """Returns the nuclide yield found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryNuclideYields()
+        return userData
+
+    def queryMassYields(self):
+        """Returns the mass yield found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryMassYields()
+        return userData
+
+    def queryChargeYields(self):
+        """Returns the charge yield found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryChargeYields()
+        return userData
 
 
 class CEMOutput( GSMOutput ):

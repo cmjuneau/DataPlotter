@@ -1398,9 +1398,15 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             theColor = self.__getLineColor()
         theMarker = self.__getMarker()
 
-        self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
-        marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
-        mfc='none', linewidth=0, label=theLabel)
+        if ( expData ):
+            self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
+            marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
+            mfc=theColor, linewidth=0, label=theLabel)
+        else:
+            self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
+            marker=theMarker, mec=theColor, ecolor=theColor, elinewidth=0.5,
+            ms=2, mew=.5,
+            mfc=theColor, linewidth=0, label=theLabel)
 
         # Add plot if not experimental data:
         if ( not expData ):

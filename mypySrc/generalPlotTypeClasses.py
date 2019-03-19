@@ -506,19 +506,19 @@ class Scatter:
             newValues = []
             for i in range(0, len(someVals), 1):
                 # Convert value to float if not a float/int:
-                someVal = someVals[i]
-                if ( not isinstance(someVal, (float, int)) ):
+                theValue = someVals[i]
+                if ( not isinstance(theValue, (float, int)) ):
                     try:
-                        someVal = float(someVal)
+                        theValue = float(theValue)
                     except:
-                        self.__write.message = "Unable to convert %s-value in Scatter object to float: " %( type ), someVal
+                        self.__write.message = "Unable to convert %s-value in Scatter object to float: " %( type ), theValue
                         self.__write.print(1, 2)
                         someVal = defaultValue
-                        self.__write.message = "   Using a value of %.3f." % (someVal)
+                        self.__write.message = "   Using a value of %.3f." % (theValue)
                         self.__write.print(1, 2)
 
                 # Now append the value to the list:
-                newValues.append( someVal )
+                newValues.append( theValue )
 
         return newValues
 
@@ -541,11 +541,11 @@ class Scatter:
             return newErrorVals
 
         # Append the default value if the length doesn't match the X/Y sets:
-        if ( len(errorVals) < len(self.__numDataPoints) ):
-            self.__write.message = "The %s length doesn't match the x-value length." % (flag)
+        if ( len(errorVals) < self.__numDataPoints ):
+            self.__write.message = "The %s length doesn't match the X or Y value length." % (flag)
             self.__write.print(1, 2)
-            self.__write.message = "   Using default of %.3f for all other %s values." % (defaultValue, flag)
-            for i in range(len(errorVals), len(self.__numDataPoints), 1):
+            self.__write.message = "   Using a default value of %.3f for all other %s values." % (defaultValue, flag)
+            for i in range(len(errorVals), self.__numDataPoints, 1):
                 errorVals.append( defaultValue )
 
         # Add to list of X-error bars:
@@ -554,7 +554,7 @@ class Scatter:
             for i in range(0, len(errorVals), 1):
                 newErrorVals.append( errorVals[i] )
 
-        return
+        return newErrorVals
 
     def __setXY(self, xVals, yVals):
         """Sets the X and Y coordinates and error values (if present)"""
@@ -675,7 +675,6 @@ class Scatter:
             xVals = []
             for i in range(0, len(self.__xVals), 1):
                 xVals.append(self.__xVals[i])
-        # return xVals
         return xVals
 
     def getYValues(self):
@@ -685,7 +684,6 @@ class Scatter:
             yVals = []
             for i in range(0, len(self.__yVals), 1):
                 yVals.append(self.__yVals[i])
-        # return yVals
         return yVals
 
     def getXError(self):

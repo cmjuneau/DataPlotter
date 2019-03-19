@@ -10,7 +10,7 @@ c ----------------------------------
 # simLabel GSM CEM
 # data He4at90.dat
 # dataLabel Exp. Data (at $90^{\circ}$)
-sim pBe.g.out
+sim nBi.g.out
 simLabel GSM
 #
 c Plot Type Arguments:
@@ -21,6 +21,7 @@ c ----------------------------------
 # plot energyspectrum
 # particle neutrons
 # origin total cascade coalescence precompound evaporation
+yield mass charge
 #
 c Annotation Arguments:
 c ----------------------------------

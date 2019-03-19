@@ -858,10 +858,9 @@ class ParticleYields:
     """
 
 
-
     def __init__(self, newPrint = Print() ):
         """Constructor"""
-        
+
         self.__write = newPrint
         self.__resetMembers()
 
@@ -877,15 +876,226 @@ class ParticleYields:
         self.__fileData = []
         self.__dataLen = 0
 
+        self.__channelYields = None
+        self.__nuclideYields = None
+        self.__massYields = None
+        self.__chargeYields = None
+
         return
 
-    def __parseFileData(self, start, end):
+    def __containsFlag(self, dataLine = ""):
+        """Determines if the line contains a yield data flag"""
+        __yieldFlags = ("yields of different channels (with > 1 mb):",
+        "*************** nuclide yields [mb]  (zero values suppressed) *****************",
+        "mass yield [mb] and the mean and variance of the kinetic energy [mev]",
+        "charge yield [mb] and the mean and variance of the  kinetic energy [mev]")
+        __numYieldFlags = len(__yieldFlags)
+
+        containsFlag = False
+        for flagIndx in range(0, __numYieldFlags, 1):
+            if ( dataLine == __yieldFlags[flagIndx] ):
+                containsFlag = True
+                break
+
+        return containsFlag
+
+    def __parseData(self, start, end):
         """Parses the file data based on the given start and end indices"""
+        __yieldFlags = ("yields of different channels (with > 1 mb):",
+        "*************** nuclide yields [mb]  (zero values suppressed) *****************",
+        "mass yield [mb] and the mean and variance of the kinetic energy [mev]",
+        "charge yield [mb] and the mean and variance of the  kinetic energy [mev]")
+        __yieldFlagNum = (1, 2, 3, 4)
+        __numYieldFlags = len(__yieldFlags)
         if ( start < 0 ):
             start = 0
         if ( end > self.__dataLen ):
             end = self.__dataLen
 
+        for lineIndx in range(start, end, 1):
+            theline = self.__fileData[lineIndx]
+
+            if ( not self.__containsFlag( theline ) ):
+                continue
+
+            # Obtain flag number for ease:
+            flagNum = -1
+            for flagIndx in range(0, __numYieldFlags, 1):
+                if ( theline == __yieldFlags[flagIndx] ):
+                    flagNum = __yieldFlagNum[flagIndx]
+                    break
+
+            # Now obtain data based on flagged data:
+            if ( flagNum == __yieldFlagNum[0] ):
+                # Channel yields:
+                self.__write.message = "\t\t\tChannel yields..."
+                self.__write.print(2, 4)
+
+                data = []
+                while( True ):
+                    lineIndx += 1
+                    if ( lineIndx >= self.__dataLen ):
+                        break
+                    theline = self.__fileData[lineIndx]
+
+                    if ( not self.__containsFlag(theline) ):
+                        data.append( theline )
+                    else:
+                        break
+                self.__parseChannelYields( data )
+
+            elif ( flagNum == __yieldFlagNum[1] ):
+                # Nuclide yields:
+                self.__write.message = "\t\t\tNuclide yields..."
+                self.__write.print(2, 4)
+
+                data = []
+                while( True ):
+                    lineIndx += 1
+                    if ( lineIndx >= self.__dataLen ):
+                        break
+                    theline = self.__fileData[lineIndx]
+
+                    if ( not self.__containsFlag(theline) ):
+                        data.append( theline )
+                    else:
+                        break
+                self.__parseNuclideYields( data )
+            elif ( flagNum == __yieldFlagNum[2] ):
+                # Mass yields:
+                self.__write.message = "\t\t\tMass yields..."
+                self.__write.print(2, 4)
+
+                data = []
+                lineIndx += 1
+                while( True ):
+                    lineIndx += 1
+                    if ( lineIndx >= self.__dataLen ):
+                        break
+                    theline = self.__fileData[lineIndx]
+
+                    if ( not self.__containsFlag(theline) ):
+                        data.append( theline )
+                    else:
+                        break
+                self.__parseMassYields( data )
+            elif ( flagNum == __yieldFlagNum[3] ):
+                # Charge yields:
+                self.__write.message = "\t\t\tCharge yields..."
+                self.__write.print(2, 4)
+
+                data = []
+                lineIndx += 1
+                while( True ):
+                    lineIndx += 1
+                    if ( lineIndx >= self.__dataLen ):
+                        break
+                    theline = self.__fileData[lineIndx]
+
+                    if ( not self.__containsFlag(theline) ):
+                        data.append( theline )
+                    else:
+                        break
+                self.__parseChargeYields( data )
+            else:
+                self.__write.message = "Unrecognized yield data flag: %s" % flagNum
+                self.__write.print(1, 2)
+
+        return
+
+    def __parseChannelYields(self, data):
+        """Parses out channel yields"""
+
+        return
+
+    def __parseNuclideYields(self, data):
+        """Parses out nuclide yields"""
+
+        return
+
+    def __parseMassYields(self, data):
+        """Parses out mass yields"""
+        __strStart = "a = "
+        __lenStrStart = len(__strStart)
+        __pmFlag = "+/-"
+        __defaultValue = 0.00
+
+        # Remove the starting flag and the summation line at the end:
+        xVals = []
+        dxVals = []
+        yVals = []
+        dyVals = []
+        for lineIndx in range(0, len(data)-2, 1):
+            newLine = data[lineIndx]
+            newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
+
+            # Parse the line and remove all "+/-" flags
+            parsedLine = parseLine( newLine )
+            lineData = []
+            for parseIndx in range(0, len(parsedLine), 1):
+                if ( not __pmFlag == parsedLine[parseIndx] ):
+                    lineData.append( parsedLine[parseIndx] )
+
+            # Convert all elements to floats:
+            for dataIndx in range(0, len(lineData), 1):
+                try:
+                    lineData[dataIndx] = float(lineData[dataIndx])
+                except:
+                    self.__write.message = "Failed to convert string (%s) to float for mass yields." % (lineData[dataIndx])
+                    self.__write.print(1, 2)
+                    lineData[dataIndx] = __defaultValue
+
+            # Obtain X/Y/dY values now for the scatter plot:
+            xVals.append( lineData[0] )
+            dxVals.append( 0.00 )
+            yVals.append( lineData[1] )
+            dyVals.append( lineData[2] )
+
+        # Now construct a charge yield object:
+        self.__massYields = genPlotCls.Scatter(xVals, yVals, dxVals, dyVals, self.__write)
+
+        return
+
+    def __parseChargeYields(self, data):
+        """Parses out charge yields"""
+        __strStart = "z = "
+        __lenStrStart = len(__strStart)
+        __pmFlag = "+/-"
+        __defaultValue = 0.00
+
+        # Remove the starting flag and the summation line at the end:
+        xVals = []
+        dxVals = []
+        yVals = []
+        dyVals = []
+        for lineIndx in range(0, len(data)-2, 1):
+            newLine = data[lineIndx]
+            newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
+
+            # Parse the line and remove all "+/-" flags
+            parsedLine = parseLine( newLine )
+            lineData = []
+            for parseIndx in range(0, len(parsedLine), 1):
+                if ( not __pmFlag == parsedLine[parseIndx] ):
+                    lineData.append( parsedLine[parseIndx] )
+
+            # Convert all elements to floats:
+            for dataIndx in range(0, len(lineData), 1):
+                try:
+                    lineData[dataIndx] = float(lineData[dataIndx])
+                except:
+                    self.__write.message = "Failed to convert string (%s) to float for charge yields." % (lineData[dataIndx])
+                    self.__write.print(1, 2)
+                    lineData[dataIndx] = __defaultValue
+
+            # Obtain X/Y/dY values now for the scatter plot:
+            xVals.append( lineData[0] )
+            dxVals.append( 0.00 )
+            yVals.append( lineData[1] )
+            dyVals.append( lineData[2] )
+
+        # Now construct a charge yield object:
+        self.__chargeYields = genPlotCls.Scatter(xVals, yVals, dxVals, dyVals, self.__write)
 
         return
 
@@ -907,3 +1117,35 @@ class ParticleYields:
         self.__parseData(startingIndx, endingIndx)
 
         return
+
+    def queryChannelYields(self):
+        """Returns the channel yields to the user"""
+        theObject = self.__channelYields
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no channel yields were created."
+            self.__write.print(1, 2)
+        return theObject
+
+    def queryNuclideYields(self):
+        """Returns the nuclide yields to the user"""
+        theObject = self.__nuclideYields
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no nuclide yields were created."
+            self.__write.print(1, 2)
+        return theObject
+
+    def queryMassYields(self):
+        """Returns the mass yields to the user"""
+        theObject = self.__massYields
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no mass yields were created."
+            self.__write.print(1, 2)
+        return theObject
+
+    def queryChargeYields(self):
+        """Returns the charge yields to the user"""
+        theObject = self.__chargeYields
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no charge yields were created."
+            self.__write.print(1, 2)
+        return theObject

@@ -302,6 +302,68 @@ class PISAPlots:
 
         return recommended
 
+class YieldPlots:
+    """Container for all yield-related plots"""
+    __yieldFlags = ("channel", "nuclide", "mass", "charge")
+    __numYieldFlags = len(__yieldFlags)
+
+    def __init__(self, newPrint = Print() ):
+        """Constrcutor"""
+        self.__write = newPrint
+        self.__resetMembers()
+
+        return
+
+    def __del__(self):
+        """Destructor"""
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all member-variables in the object"""
+        self.__yieldTypes = []
+        self.__numYieldTypes = 0
+
+        return
+
+    def isValidType(self, newType):
+        """Determines if a client-defined type is valid"""
+        isValid = False
+        newType = newType.lower().strip()
+        for typeIndx in range(0, self.__numYieldFlags, 1):
+            if ( newType.startswith( self.__yieldFlags[typeIndx] ) ):
+                isValid = True
+                break
+        return isValid
+
+    def addYieldType(self, newType):
+        """Adds a yield type to the container"""
+        if ( self.isValidType(newType) ):
+            self.__yieldTypes.append( newType.lower().strip() )
+            self.__numYieldTypes += 1
+        else:
+            self.__write.message = "Invalid yield plot type given: %s" % newType
+            self.__write.print(1, 2)
+
+        return
+
+    def queryNumYieldTypes(self):
+        """Returns the number of yield types that exist in the container"""
+        return self.__numYieldTypes
+
+    def queryYieldTypes(self, typeIndx):
+        """Returns the yield types or a single type when given a valid index"""
+        yieldTypes = self.__yieldTypes
+        if ( typeIndx is not None and isinstance(typeIndx, (int, float)) ):
+            if ( typeIndx >= 0 and typeIndx < self.__numYieldTypes ):
+                yieldTypes = self.__yieldTypes[typeIndx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the YIELD types." % indx
+                self.__write.print(1, 2)
+
+        return yieldTypes
+
+
 
 class PlotGSMInputFile:
     """Reads an input file and sets values based on input specification."""
@@ -315,7 +377,7 @@ class PlotGSMInputFile:
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
     __dataArgs = ("data", "sim", "simlabel", "datalabel")
-    __plotArgs = ("particle", "plot", "angle", "origin")
+    __plotArgs = ("particle", "plot", "angle", "origin", "yield")
     __annotateArgs = ("annotate", "annotatepos", "otherannotate", "otherannotatepos", "otherannotatecolor", "legend")
     __miscArgs = ("comment", "c", "save", "dpi", "show", "override", "scalesim", "scaledata")
     __endArgs = ("end", "quit", "stop", "done", "new")
@@ -469,6 +531,8 @@ class PlotGSMInputFile:
         self.__numParticleDataPlot = 0
         self.__particleDataOrigins = []
         self.__numParDataOrigins = 0
+        # (Yields)
+        self.__yields = YieldPlots( self.__write )
         # (Misc.)
         self.__plotTypes = []
         self.__numPlotTypes = 0
@@ -601,6 +665,10 @@ class PlotGSMInputFile:
         # Apply PISA plot(s):
         if ( self.__pisa.queryNumPlotTypes() >= 1 ):
             self.__plotPISA()
+
+        # Apply yield plots:
+        if ( self.__yields.queryNumYieldTypes() >= 1 ):
+            self.__plotYields()
 
 
         for i in range(0, self.__numPlotTypes, 1):
@@ -740,7 +808,66 @@ class PlotGSMInputFile:
             if ( self.__plotSeveralTypes and self.__numParticleDataPlot > 1 ):
                 self.__myPlot.addPlotType()
 
-        self.__saveAndClearPlot()
+                self.__saveAndClearPlot()
+
+        return
+
+    def __plotYields(self):
+        """Plots all yields requested"""
+        __yieldFlags = ("channel", "nuclide", "mass", "charge")
+        __numYieldFlags = len(__yieldFlags)
+        __xLabel = ("Channel", "Nuclide", "A$_{Residual}$", "Z$_{Residual}$")
+        __yLabel = ("Channel Yields [mb]", "Nuclide Yields [mb]", "Mass Yield [mb]", "Charge Yield [mb]")
+        __pltTitle = ("Channel Yields", "Nuclide Yields", "Mass Yields", "Charge Yields")
+
+        # Do not override if more than one specified:
+        if ( self.__yields.queryNumYieldTypes() > 1 ):
+            self.__override = False
+
+        self.__plotSeveralTypes = False   # Use distinct coloring for the plots of yields:
+        for yldIndx in range(0, self.__yields.queryNumYieldTypes(), 1):
+
+            # Setup quick access information:
+            yldType = self.__yields.queryYieldTypes( yldIndx )
+            yldNum = 0
+            for i in range(0, __numYieldFlags, 1):
+                if ( yldType == __yieldFlags[i] ):
+                    yldNum = i
+                    break
+
+            # Obtain X/Y axis labels and plot title
+            if ( self.__xLabel is None ):
+                self.__xLabel = __xLabel[yldNum]
+            if ( self.__yLabel is None ):
+                self.__yLabel = __yLabel[yldNum]
+            if ( self.__plotTitle is None ):
+                self.__plotTitle = __pltTitle[yldNum]
+
+            # Create plot now:
+            for simIndx in range(0, self.__numSimObjects, 1):
+                if ( yldNum == 0 ):
+                    yldData = self.__simObjects[simIndx].queryChannelYields()
+                elif ( yldNum == 1):
+                    yldData = self.__simObjects[simIndx].queryNuclideYields()
+                elif ( yldNum == 2):
+                    yldData = self.__simObjects[simIndx].queryMassYields()
+                elif ( yldNum == 3):
+                    yldData = self.__simObjects[simIndx].queryChargeYields()
+                else:
+                    self.__write.message = "An unknown yield flag (%d) was found." % (yldNum)
+                    self.__write.print(1, 2)
+                    continue
+
+                xVals = yldData.getXValues()
+                dxVals = yldData.getXError()
+                yVals = yldData.getYValues()
+                dyVals = yldData.getYError()
+
+                self.__myPlot.addErrorBar(xVals, yVals, dxVals, dyVals,
+                self.__simLabels[simIndx], self.__scaleSimX[simIndx], self.__scaleSimY[simIndx], False)
+
+            # Now create new plot if needed:
+            self.__saveAndClearPlot()
 
         return
 
@@ -1020,7 +1147,7 @@ class PlotGSMInputFile:
 
     def __applyPlotArgs(self, lineID, lineFlag):
         """Checks if the input has flag from the __plotArgs tuple"""
-        # __plotArgs = ("particle", "plot", "angle". "origin")
+        # __plotArgs = ("particle", "plot", "angle", "origin", "yield")
         foundFlag = True
 
         if ( lineID == self.__plotArgs[0] ):
@@ -1083,6 +1210,15 @@ class PlotGSMInputFile:
             for i in range(0, len(originFlags), 1):
                 self.__particleDataOrigins.append( originFlags[i] )
                 self.__numParDataOrigins += 1
+
+        elif ( lineID.startswith(self.__plotArgs[4]) ):
+            # yield plot
+            yieldTypes = fileModule.parseLine( lineFlag )
+
+            if ( len(yieldTypes) > 0 ):
+                for i in range(0, len(yieldTypes), 1):
+                    self.__yields.addYieldType( yieldTypes[i] )
+
 
         else:
             foundFlag = False
