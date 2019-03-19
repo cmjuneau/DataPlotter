@@ -104,6 +104,7 @@ class GSMOutput:
             self.__fileData[lineIndx] = self.__fileData[lineIndx].lower().strip()
 
         self.__parseParticleData()
+        self.__parseYieldData()
         self.__parseDoubleDiff()
 
         return
@@ -159,6 +160,51 @@ class GSMOutput:
 
                 # Add data to the set:
                 parData.append( parLine )
+
+
+            # The data relating to the particle was obtained; create object:
+            self.__particleData.append( gsmData.ParticleData(theParticle, self.__write) )
+            self.__particleData[ self.__numParticleData ].addFileData( parData )
+            self.__numParticleData += 1
+
+        return
+
+    def __parseYieldData(self):
+        """
+        Parses out particle yield data:
+
+        Parses out data for:
+           Mass yields (mb)
+           Charge yields (mb)
+           More can be added easily
+        """
+        __yieldStartFlag = ("yields of different channels (with > 1 mb):")
+        __yieldEndFlag = ("**********************************")
+
+        self.__write.message = "\t\tObtaining yield data..."
+        self.__write.print(2, 3)
+
+        # Look through file data for the start/end flags:
+        for lineIndx in range(0, self.__fileLen, 1):
+
+            # Skip all lines that don't start with ***'s
+            if ( not self.__fileData[lineIndx].startswith(__yieldStartFlag[0]) ):
+                continue
+
+            # Found the start of the yield section; obtain data:
+            print( self.__fileData[lineIndx])
+            yieldData = []
+            while ( True ):
+                lineIndx += 1
+                dataLine = self.__fileData[lineIndx].lower().strip()
+
+                # Look for end of yield data:
+                if ( dataLine.startswith(__yieldEndFlag[0]) ):
+                    print(dataLine)
+                    break
+
+                # Add data to the set:
+                yieldData.append( dataLine )
 
 
             # The data relating to the particle was obtained; create object:

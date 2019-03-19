@@ -849,3 +849,61 @@ class ParticleData:
         dataLen = len(fileData)
 
         return
+
+
+class ParticleYields:
+    """
+    The \"ParticleYields\" object contains scatter plots (with associated error bars)
+    of mass yields, charge yields, and really any yield that GSM can have.
+    """
+
+
+
+    def __init__(self, newPrint = Print() ):
+        """Constructor"""
+        
+        self.__write = newPrint
+        self.__resetMembers()
+
+        return
+
+    def __del__(self):
+        """Destructor"""
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all member variables"""
+        self.__fileData = []
+        self.__dataLen = 0
+
+        return
+
+    def __parseFileData(self, start, end):
+        """Parses the file data based on the given start and end indices"""
+        if ( start < 0 ):
+            start = 0
+        if ( end > self.__dataLen ):
+            end = self.__dataLen
+
+
+        return
+
+    def addFileData(self, fileData):
+        """Adds data to the file and parses it"""
+        if ( not isinstance(fileData, list) ):
+            self.__write.message = "File data must be a list of strings. Cannot parse yield data."
+            self.__write.print(1, 2)
+            return
+
+        # Reduce file data:
+        startingIndx = self.__dataLen
+        for lineIndx in range(0, len(fileData), 1):
+            fileData[lineIndx] = fileData[lineIndx].lower().strip()
+            self.__fileData.append( fileData[lineIndx] )
+            self.__dataLen += 1
+        endingIndx = self.__dataLen
+
+        self.__parseData(startingIndx, endingIndx)
+
+        return
