@@ -443,25 +443,25 @@ class GSMOutput:
 
     def getParticleData(self, particleID):
         """Returns the particle data requested, if exists"""
-        theData = None
+        theParData = None
         for parIndx in range(0, self.__numParticleData, 1):
             if ( particleID == self.__particleData[parIndx].queryParticleID() ):
-                theData = self.__particleData[parIndx]
+                theParData = self.__particleData[parIndx]
                 break
 
-        if ( theData == None ):
+        if ( theParData == None ):
             self.__write.message = "No particle data exists for %s particle(s)." % particleID
             self.__write.print(1, 2)
 
-        return theData
+        return theParData
 
     def getParticleEnergySpectra(self, particleID):
         """Returns the particle data's energy spectra"""
         energySpectra = None
 
-        theData = self.getParticleData(particleID)
-        if ( not theData == None ):
-            energySpectra = theData.queryEnergySpectra()
+        theParData = self.getParticleData(particleID)
+        if ( not theParData == None ):
+            energySpectra = theParData.queryEnergySpectra()
 
         if ( energySpectra == None ):
             self.__write.message = "No energy spectrum exists for %s particles." % particleID
@@ -476,10 +476,6 @@ class GSMOutput:
         theESpectra = self.getParticleEnergySpectra(particleID)
         if ( not theESpectra == None ):
             theHistogram = theESpectra.queryHistogram(histLabel)
-
-        if ( theHistogram == None ):
-            self.__write.message = "No energy spectra histograms exist in the energy spectrum object."
-            self.__write.print(1, 2)
 
         return theHistogram
 
@@ -521,6 +517,22 @@ class GSMOutput:
         yieldData = self.queryYieldData()
         if ( not yieldData == None ):
             userData = yieldData.queryChargeYields()
+        return userData
+
+    def queryMassKEDist(self):
+        """Returns the mass yield's kinetic energy found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryMassKEDist()
+        return userData
+
+    def queryChargeKEDist(self):
+        """Returns the charge yield's kinetic energy found in the output file"""
+        userData = None
+        yieldData = self.queryYieldData()
+        if ( not yieldData == None ):
+            userData = yieldData.queryChargeKEDist()
         return userData
 
 

@@ -302,9 +302,195 @@ class PISAPlots:
 
         return recommended
 
+class ParticlePlots:
+    """
+    Contains options to plot particle data
+    """
+    __validInputParticles = ("neutrons", "protons", "deuterons", "tritons",
+    "helium-3", "alphas", "neg.pions", "neut.pions", "pos.pions")
+    __validParticles = ("neutrons", "protons", "deuterons", "tritons",
+    "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
+    __validLaTeXParticles = ("Neutron", "Proton", "Deuterium", "Tritium",
+    "$^{3}$He", "$^{4}$He",
+    "$\pi^{-}$", "$\pi^{0}$", "$\pi^{+}$")
+    __numValidParticles = len(__validParticles)
+    __validOrigins = ("total", "cascade", "coalescence", "precompound",
+    "evaporation")
+    __numValidOrigins = len(__validOrigins)
+    __validPlotTypes = ("energyspectrum", "")
+    __numValidPlotTypes = len(__validPlotTypes)
+
+    def __init__(self, newPrint = Print()):
+        """Constructor"""
+
+        self.__write = newPrint
+        self.__resetMembers()
+
+        return
+
+    def __del__(self):
+        """Destructor"""
+        self.__resetMembers()
+        return
+
+    def __resetMembers(self):
+        """Resets all member variables in the class"""
+        # What particles to plot:
+        self.__particles = []
+        self.__latexParticles = []
+        self.__numParticles = 0
+        # Types of information to plot:
+        self.__plotTypes = []
+        self.__numPlotTypes = 0
+        # Where particles originated:
+        self.__desiredOrigin = []
+        self.__numDesiredOrigin = 0
+
+        return
+
+    def isValidParticle(self, newParticle):
+        """Returns if the particle is valid for the container"""
+        isValid = False
+        newParticle = newParticle.lower().strip()
+        for parIndx in range(0, self.__numValidParticles, 1):
+            if ( newParticle.startswith(self.__validInputParticles[parIndx]) ):
+                isValid = True
+                break
+        return isValid
+
+    def isValidPlotType(self, newType):
+        """Determines if the plot type is valid"""
+        isValid = False
+        newType = newType.lower().strip()
+        for typeIndx in range(0, self.__numValidPlotTypes, 1):
+            if ( newType == self.__validPlotTypes[typeIndx] ):
+                isValid = True
+                break
+        return isValid
+
+    def isValidOrigin(self, newOrigin):
+        """Determines if the origin is valid"""
+        isValid = False
+        newOrigin = newOrigin.lower().strip()
+        for origIndx in range(0, self.__numValidOrigins, 1):
+            if ( newOrigin == self.__validOrigins[origIndx] ):
+                isValid = True
+                break
+        return isValid
+
+    def __queryParticleIndex(self, theParticle):
+        """Returns the array element number that the particle is for its global values"""
+        validParIndx = -1
+        theParticle = theParticle.lower().strip()
+        if ( self.isValidParticle(theParticle) ):
+            for parIndx in range(0, self.__numValidParticles, 1):
+                if ( theParticle == self.__validInputParticles[parIndx] ):
+                    validParIndx = parIndx
+                    break
+        else:
+            self.__write.message = "Invalid particle identified: %s" % (theParticle)
+            self.__write.print(1, 2)
+
+        return validParIndx
+
+    def addParticle(self, newParticle):
+        """Adds a particle to the list"""
+        newParticle = newParticle.lower().strip()
+        if ( self.isValidParticle(newParticle) ):
+            partIndx = self.__queryParticleIndex(newParticle)
+            self.__particles.append ( self.__validParticles[partIndx] )
+            self.__latexParticles.append ( self.__validLaTeXParticles[partIndx] )
+            self.__numParticles += 1
+        else:
+            self.__write.message = "Invalid particle passed in: %s" % (newParticle)
+            self.__write.print(1, 2)
+        return
+
+    def addPlotType(self, newType):
+        """Adds a plot type to the list"""
+        newType = newType.lower().strip()
+        if ( self.isValidPlotType(newType) ):
+            self.__plotTypes.append ( newType )
+            self.__numPlotTypes += 1
+        else:
+            self.__write.message = "Invalid plot type passed in for particle data: %s" % (newType)
+            self.__write.print(1, 2)
+        return
+
+    def addOrigin(self, newOrigin):
+        """Adds an origin to the list"""
+        newOrigin = newOrigin.lower().strip()
+        if ( self.isValidOrigin(newOrigin) ):
+            self.__desiredOrigin.append( newOrigin )
+            self.__numDesiredOrigin += 1
+        else:
+            self.__write.message = "Invalid origin passed in: %s" % (newOrigin)
+            self.__write.print(1, 2)
+        return
+
+    def queryNumParticles(self):
+        """Returns the number of particles requested"""
+        return self.__numParticles
+
+    def queryNumPlotTypes(self):
+        """Returns the number of plot types requested"""
+        return self.__numPlotTypes
+
+    def queryNumOrigin(self):
+        """Returns the nummber of origins requested for the plot"""
+        return self.__numDesiredOrigin
+
+    def queryParticles(self, parIndx = None):
+        """Returns the particle list or a single particle when given a valid index"""
+        theParticles = self.__particles
+        if ( parIndx is not None and isinstance(parIndx, (int, float)) ):
+            if ( parIndx >= 0 and parIndx < self.__numParticles ):
+                theParticles = self.__particles[parIndx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the particle types." % (parIndx)
+                self.__write.print(1, 2)
+
+        return theParticles
+
+    def queryLaTeXParticles(self, parIndx = None):
+        """Returns the latex-type particle list or a single particle when given a valid index"""
+        theParticles = self.__latexParticles
+        if ( parIndx is not None and isinstance(parIndx, (int, float)) ):
+            if ( parIndx >= 0 and parIndx < self.__numParticles ):
+                theParticles = self.__latexParticles[parIndx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the latex particles." % (parIndx)
+                self.__write.print(1, 2)
+
+        return theParticles
+
+    def queryPlotTypes(self, typeIndx = None):
+        """Returns the plot type list or a single plot type when given a valid index"""
+        thePltTypes = self.__plotTypes
+        if ( typeIndx is not None and isinstance(typeIndx, (int, float)) ):
+            if ( typeIndx >= 0 and typeIndx < self.__numParticles ):
+                thePltTypes = self.__plotTypes[typeIndx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the plot types." % (typeIndx)
+                self.__write.print(1, 2)
+
+        return thePltTypes
+
+    def queryOrigins(self, origIndx = None):
+        """Returns the origin list or a single origin when given a valid index"""
+        theOrigins = self.__desiredOrigin
+        if ( origIndx is not None and isinstance(origIndx, (int, float)) ):
+            if ( origIndx >= 0 and origIndx < self.__numDesiredOrigin ):
+                theOrigins = self.__desiredOrigin[origIndx]
+            else:
+                self.__write.message = "An invalid index (%d) was given when querying the latex particles." % (origIndx)
+                self.__write.print(1, 2)
+
+        return theOrigins
+
 class YieldPlots:
     """Container for all yield-related plots"""
-    __yieldFlags = ("channel", "nuclide", "mass", "charge")
+    __yieldFlags = ("channel", "nuclide", "mass", "charge", "kemass", "kecharge")
     __numYieldFlags = len(__yieldFlags)
 
     def __init__(self, newPrint = Print() ):
@@ -351,28 +537,22 @@ class YieldPlots:
         """Returns the number of yield types that exist in the container"""
         return self.__numYieldTypes
 
-    def queryYieldTypes(self, typeIndx):
+    def queryYieldTypes(self, typeIndx = None):
         """Returns the yield types or a single type when given a valid index"""
         yieldTypes = self.__yieldTypes
         if ( typeIndx is not None and isinstance(typeIndx, (int, float)) ):
             if ( typeIndx >= 0 and typeIndx < self.__numYieldTypes ):
                 yieldTypes = self.__yieldTypes[typeIndx]
             else:
-                self.__write.message = "An invalid index (%d) was given when querying the YIELD types." % indx
+                self.__write.message = "An invalid index (%d) was given when querying the YIELD types." % (typeIndx)
                 self.__write.print(1, 2)
 
         return yieldTypes
 
 
-
 class PlotGSMInputFile:
     """Reads an input file and sets values based on input specification."""
     # Input arguments:
-    __validParticleDataIDs = ("neutrons", "protons", "deuterons", "tritons",
-    "helium-3", "alphas", "neg. pions", "neut pions", "pos. pions")
-    __validLaTeXParticleDataIDS = ("Neutron", "Proton", "Deuterium", "Tritium", "$^{3}$He", "$^{4}$He",
-    "$\pi^{-}$", "$\pi^{0}$", "$\pi^{+}$")
-    __numValidParticleDataIDs = len(__validParticleDataIDs)
     __fileCommentFlag = "#"
     __axisLims = ("xrange", "yrange", "xscale", "yscale")
     __figLabels = ("xlabel", "ylabel", "title")
@@ -526,11 +706,7 @@ class PlotGSMInputFile:
         # (PISA)
         self.__pisa = PISAPlots(self.__write)
         # (Particle Data)
-        self.__particleDataPlot = []
-        self.__latexParticleData = []
-        self.__numParticleDataPlot = 0
-        self.__particleDataOrigins = []
-        self.__numParDataOrigins = 0
+        self.__particleData = ParticlePlots( self.__write )
         # (Yields)
         self.__yields = YieldPlots( self.__write )
         # (Misc.)
@@ -586,13 +762,19 @@ class PlotGSMInputFile:
 
         return
 
+    def __toggleSeveralPlots(self, newVal):
+        """The procedure changes the value of the allowance of multiple plots in a single plot"""
+        if ( isinstance(newVal, bool) ):
+            self.__plotSeveralTypes = newVal
+        else:
+            self.__write.message = "Invalid type passed in to toggle allowance of several plots."
+            self.__write.print(1, 2)
+        self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
+
+        return
+
     def __plotLines(self):
         """Plots all lines desired by the user"""
-
-        # Turn off multiple plots if they weren't specified:
-        if ( not self.__pisa.recommendLineScaling() and not self.__pisa.recommendMultiplePlots() ):
-            self.__plotSeveralTypes = False
-            self.__myPlot.toggleSeveralPlots( self.__plotSeveralTypes )
 
         # Plot data and simulation lines:
         self.__plotDataLines()   # Note: calling this first allows all legends for the line type to be shown
@@ -642,8 +824,7 @@ class PlotGSMInputFile:
 
     def __plotSimLines(self):
         """Plots all lines desired by the user"""
-        __validPlotTypes = ("energysp")
-        __plotTypeName = ("energy spectrum")
+        __validPlotTypes = ("")
         __numValidPlotTypes = len(__validPlotTypes)
 
         # Ensure the the number of legend labels matches the sim. objects:
@@ -670,29 +851,37 @@ class PlotGSMInputFile:
         if ( self.__yields.queryNumYieldTypes() >= 1 ):
             self.__plotYields()
 
+        # Apply particle plots:
+        if ( self.__particleData.queryNumPlotTypes() >= 1 ):
+            self.__plotParticleData()
 
-        for i in range(0, self.__numPlotTypes, 1):
-            # Validate plot type, otherwise continue:
-            validPlotType = False
-            plotTypeIndx = -1
-            for j in range(0, __numValidPlotTypes, 1):
-                if ( self.__plotTypes[i].startswith(__validPlotTypes[j]) ):
-                    validPlotType = True
-                    plotTypeIndx = j
-                    break
-            if ( not validPlotType ):
-                self.__write.message = "Invalid plot type specified: %s" % (self.__plotTypes[i])
-                self.__write.print(1, 2)
-                continue
+        if ( self.__numPlotTypes > 0 ):
+            for i in range(0, self.__numPlotTypes, 1):
+                # Validate plot type, otherwise continue:
+                validPlotType = False
+                plotTypeIndx = -1
+                for j in range(0, __numValidPlotTypes, 1):
+                    if ( self.__plotTypes[i] == __validPlotTypes[j] ):
+                        validPlotType = True
+                        plotTypeIndx = j
+                        break
+                if ( not validPlotType ):
+                    self.__write.message = "Invalid plot type specified: %s" % (self.__plotTypes[i])
+                    self.__write.print(1, 2)
+                    continue
 
-            if ( self.__plotTypes[i].startswith(__validPlotTypes[0]) ):
-                self.__plotEnergySpectrum()
+                # Do something for the specific plot:
+                # -
 
         return
 
     def __plotPISA(self):
         """Plots all PISA data"""
         __validPlotTypes = ("doubled", "anglei", "energyi")
+
+        # Turn off multiple plots if they weren't specified:
+        if ( not self.__pisa.recommendLineScaling()  ):
+            self.__toggleSeveralPlots(False)
 
         for typeIndx in range(0, self.__pisa.queryNumPlotTypes(), 1):
 
@@ -775,50 +964,109 @@ class PlotGSMInputFile:
 
         return
 
-    def __plotEnergySpectrum(self):
+    def __plotParticleData(self):
         """Plots the energy spectrum given the input"""
+        __validOrigins = ("total", "cascade", "coalescence", "precompound",
+        "evaporation")
+        __originLabel = ("Total", "Cascade", "Coalescence", "Precompound",
+        "Evaporation")
+        __numValidOrigins = len(__validOrigins)
+        __validPlotTypes = ("energyspectrum", "")
+        __xLabel = ("Energy [MeV]", "")
+        __yLabel = ("Energy Spectrum [mb/MeV]", "")
+        __plotTitle = ("Energy Spectrum", "")
+        __numValidPlotTypes = len(__validPlotTypes)
 
-        self.__write.message = "Creating energy spectrum plot..."
+        # Allow/disable several plots:
+        numParticles = self.__particleData.queryNumParticles()
+        numOrigins = self.__particleData.queryNumOrigin()
+        if ( numParticles == 1 ):
+            self.__toggleSeveralPlots(False)
+        else:
+            self.__toggleSeveralPlots(True)
+
+
+        self.__write.message = "Creating particle data plots..."
         self.__write.print(2, 2)
 
-        # Plot energy spectrum for each particle requested and each type:
-        for partIndx in range(0, self.__numParticleDataPlot, 1):
-            theParticle = self.__particleDataPlot[partIndx]
-            for origIndx in range(0, self.__numParDataOrigins, 1):
-                theOrigin = self.__particleDataOrigins[origIndx]
-                for dataObj in range(0, self.__numSimObjects, 1):
-                    # Obtain histogram from the output file:
-                    theHistogram = self.__simObjects[dataObj].getParticleLabeledEnergySpectra(theParticle, theOrigin)
+        for typIndx in range(0, self.__particleData.queryNumPlotTypes() ):
 
-                    if ( theHistogram == None ):
-                        continue
+            # Obtain quick reference for the plot:
+            pltTyp = self.__particleData.queryPlotTypes( typIndx )
+            typNum = -1
+            for validTypIndx in range(0, __numValidPlotTypes):
+                if ( pltTyp == __validPlotTypes[validTypIndx] ):
+                    typNum = validTypIndx
+                    break
 
-                    if ( theHistogram.queryLargestValue() <= 0.00 ):
-                        self.__write.message = "No %s values exist for %s particles." % (theOrigin, theParticle)
-                        self.__write.print(1, 2)
-                        continue
+            # Get quick reference for particle names:
+            if ( self.__particleData.queryNumParticles() > 1 ):
+                parName = "Particle"
+            else:
+                parName = self.__particleData.queryLaTeXParticles(0)
+            # Apply X/Y labels and plot title:
+            if ( self.__xLabel is None ):
+                self.__xLabel = "%s %s" % (parName, __xLabel[typNum])
+            if ( self.__yLabel is None ):
+                self.__yLabel = __yLabel[typNum]
+            if ( self.__plotTitle is None ):
+                self.__plotTitle = "%s %s" % (parName, __plotTitle[typNum])
 
-                    self.__myPlot.addHistogram(theHistogram.queryBinBounds(),
-                    theHistogram.queryYValues(), self.__simLabels[dataObj],
-                    self.__scaleSimX[dataObj], self.__scaleSimY[dataObj])
+            # Plot the values now:
+            for parIndx in range(0, self.__particleData.queryNumParticles(), 1):
+                theParticle = self.__particleData.queryParticles(parIndx)
+                for origIndx in range(0, self.__particleData.queryNumOrigin(), 1):
+                    theOrigin = self.__particleData.queryOrigins(origIndx)
+                    originLabel = "?"
+                    for origIndx2 in range(0, __numValidOrigins, 1):
+                        if ( theOrigin == __validOrigins[origIndx2] ):
+                            originLabel = __originLabel[origIndx2]
+                    for simIndx in range(0, self.__numSimObjects, 1):
 
-                if ( self.__plotSeveralTypes and self.__numParDataOrigins > 1 ):
+                        # Obtain histogram from the output file:
+                        theHistogram = self.__simObjects[simIndx].getParticleLabeledEnergySpectra(theParticle, theOrigin)
+
+                        if ( theHistogram == None ):
+                            continue
+
+                        if ( theHistogram.queryLargestValue() <= 0.00 ):
+                            self.__write.message = "No %s values exist for %s particles." % (theOrigin, theParticle)
+                            self.__write.print(1, 2)
+                            continue
+
+                        # Label by origin instead w/ 1 sim. object
+                        includeLabel = False
+                        if ( self.__numSimObjects == 1 ):
+                            if ( parIndx == 0 ):
+                                includeLabel = True
+                            theLabel = originLabel
+                        else:
+                            theLabel = self.__simLabels[simIndx]
+
+                        self.__myPlot.addHistogram(theHistogram.queryBinBounds(),
+                        theHistogram.queryYValues(), theLabel,
+                        self.__scaleSimX[simIndx], self.__scaleSimY[simIndx], includeLabel)
+
+                if ( self.__plotSeveralTypes ):
                     self.__myPlot.addPlotType()
 
-            if ( self.__plotSeveralTypes and self.__numParticleDataPlot > 1 ):
-                self.__myPlot.addPlotType()
-
-                self.__saveAndClearPlot()
+            self.__saveAndClearPlot()
 
         return
 
     def __plotYields(self):
         """Plots all yields requested"""
-        __yieldFlags = ("channel", "nuclide", "mass", "charge")
+        __yieldFlags = ("channel", "nuclide", "mass", "charge", "kemass",
+        "kecharge")
         __numYieldFlags = len(__yieldFlags)
-        __xLabel = ("Channel", "Nuclide", "A$_{Residual}$", "Z$_{Residual}$")
-        __yLabel = ("Channel Yields [mb]", "Nuclide Yields [mb]", "Mass Yield [mb]", "Charge Yield [mb]")
-        __pltTitle = ("Channel Yields", "Nuclide Yields", "Mass Yields", "Charge Yields")
+        __xLabel = ("Channel", "Nuclide", "A$_{Residual}$", "Z$_{Residual}$",
+        "A$_{Residual}$", "Z$_{Residual}$")
+        __yLabel = ("Channel Yields [mb]", "Nuclide Yields [mb]",
+        "Mass Yield [mb]", "Charge Yield [mb]", "Kinetic Energy [MeV]",
+        "Kinetic Energy [MeV]")
+        __pltTitle = ("Channel Yields", "Nuclide Yields", "Mass Yields",
+        "Charge Yields", "Kinetic Energy Distribution of Residuals",
+        "Kinetic Energy Distribution of Residuals")
 
         # Do not override if more than one specified:
         if ( self.__yields.queryNumYieldTypes() > 1 ):
@@ -829,7 +1077,7 @@ class PlotGSMInputFile:
 
             # Setup quick access information:
             yldType = self.__yields.queryYieldTypes( yldIndx )
-            yldNum = 0
+            yldNum = -1
             for i in range(0, __numYieldFlags, 1):
                 if ( yldType == __yieldFlags[i] ):
                     yldNum = i
@@ -853,6 +1101,10 @@ class PlotGSMInputFile:
                     yldData = self.__simObjects[simIndx].queryMassYields()
                 elif ( yldNum == 3):
                     yldData = self.__simObjects[simIndx].queryChargeYields()
+                elif ( yldNum == 4):
+                    yldData = self.__simObjects[simIndx].queryMassKEDist()
+                elif ( yldNum == 5):
+                    yldData = self.__simObjects[simIndx].queryChargeKEDist()
                 else:
                     self.__write.message = "An unknown yield flag (%d) was found." % (yldNum)
                     self.__write.print(1, 2)
@@ -1156,39 +1408,39 @@ class PlotGSMInputFile:
             if ( len(newParticles) > 0 ):
                 for i in range(0, len(newParticles), 1):
                     # Ensure particle name is valid:
-                    validParticle = self.__pisa.isValidParticle( newParticles[i] )
-
-                    if ( validParticle ):
+                    # (in PISA:)
+                    if ( self.__pisa.isValidParticle( newParticles[i] ) ):
                         self.__pisa.addParticle( newParticles[i] )
-                    else:
-                        # Check if particle in particleData array:
-                        validParticle = False
-                        particleIndx = 0
-                        for j in range(0, self.__numValidParticleDataIDs, 1):
-                            if ( newParticles[i] == self.__validParticleDataIDs[j] ):
-                                particleIndx = j
-                                validParticle = True
-                                break
-                        if ( validParticle ):
-                            self.__particleDataPlot.append( self.__validParticleDataIDs[j] )
-                            self.__latexParticleData.append( self.__validLaTeXParticleDataIDS[j] )
-                            self.__numParticleDataPlot += 1
-                        else:
-                            self.__write.message = "Invalid particle identifier found: %s" % (newParticles[i])
-                            self.__write.print(1, 2)
+                        continue
+
+                    # (in Particle data:)
+                    if ( self.__particleData.isValidParticle( newParticles[i] ) ):
+                        self.__particleData.addParticle( newParticles[i] )
+                        continue
+
+                    # Reach here when no valid particle was found for the given input:
+                    self.__write.message = "Invalid particle identifier found: %s" % (newParticles[i])
+                    self.__write.print(1, 2)
 
         elif ( lineID == self.__plotArgs[1] ):
             # Plot given; specify plot type:
             plotTypes = fileModule.parseLine( lineFlag.strip().lower() )
             if ( len(plotTypes) > 0 ):
                 for i in range(0, len(plotTypes), 1):
-                    isValid = self.__pisa.isValidPlotType( plotTypes[i] )
 
-                    if ( isValid ):
+                    # Add to PISA, if valid:
+                    if ( self.__pisa.isValidPlotType( plotTypes[i] ) ):
                         self.__pisa.addPlotType( plotTypes[i] )
-                    else:
-                        self.__plotTypes.append( plotTypes[i] )
-                        self.__numPlotTypes += 1
+                        continue
+
+                    # Add to particle data, if valid:
+                    if ( self.__particleData.isValidPlotType( plotTypes[i] ) ):
+                        self.__particleData.addPlotType( plotTypes[i] )
+                        continue
+
+                    # For other plot types:
+                    self.__plotTypes.append( plotTypes[i] )
+                    self.__numPlotTypes += 1
 
         elif ( lineID == self.__plotArgs[2] ):
             # Plot given angle:
@@ -1208,8 +1460,7 @@ class PlotGSMInputFile:
             # Plot based on origin (total, cascade, etc.)
             originFlags = fileModule.parseLine( lineFlag )
             for i in range(0, len(originFlags), 1):
-                self.__particleDataOrigins.append( originFlags[i] )
-                self.__numParDataOrigins += 1
+                self.__particleData.addOrigin( originFlags[i] )
 
         elif ( lineID.startswith(self.__plotArgs[4]) ):
             # yield plot

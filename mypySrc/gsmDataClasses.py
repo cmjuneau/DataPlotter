@@ -539,6 +539,17 @@ class ParticleEnergySpectra:
 
         return
 
+    def isValidHistFlag(self, histFlag):
+        """Checks if the histogram flag is valid"""
+        isValid = False
+        histFlag = histFlag.lower().strip()
+        for flgIndx in range(0, self.__numHistoFlags, 1):
+            if ( histFlag == self.__histogramFlags[flgIndx] ):
+                isValid = True
+                break
+
+        return isValid
+
     def addHistogram(self, newHistogram):
         """Adds a histogram to the object"""
         validHisto = False
@@ -564,35 +575,42 @@ class ParticleEnergySpectra:
 
         return
 
+    def histExists(self, histFlag):
+        """Determines if the histogram with the desired flag exists in the object"""
+        histExists = False
+        histFlag = histFlag.lower().strip()
+        if ( self.isValidHistFlag(histFlag) ):
+            for histIndx in range(0, self.__numHistograms, 1):
+                if ( histFlag == self.__partHistograms[histIndx].queryNote().lower().strip() ):
+                    histExists = True
+                    break
+        else:
+            self.__write.message = "The invalid histogram flag (%s) does not exist in the energy spectrum object." % (histFlag)
+            self.__write.print(1, 2)
+
+        return histExists
+
     def queryParticleID(self):
         """Returns the particle ID"""
         return self.__particleID
 
-    def queryHistogram(self, histFlag=__histogramFlags[0]):
+    def queryHistogram(self, histFlag):
         """Returns a histogram with the given flag"""
         theHistogram = None
 
         # Validate desired histogram flag:
         validFlag = False
         histFlag = histFlag.lower().strip()
-        for flagIndx in range(0, self.__numHistoFlags, 1):
-            if ( self.__histogramFlags[flagIndx] in histFlag ):
-                validFlag = True
-                break
 
         # Search for histogram with the given flag:
-        if ( validFlag ):
-            containsHist = False
+        if ( self.histExists(histFlag) ):
             for histIndx in range(0, self.__numHistograms, 1):
                 if ( histFlag == self.__partHistograms[histIndx].queryNote().lower().strip() ):
                     containsHist = True
                     theHistogram = self.__partHistograms[histIndx]
                     break
-            if ( not containsHist ):
-                self.__write.message = "The histogram with flag \"%s\" does not exist within the %s particle's energy spectra." % (histFlag, self.__particleID)
-                self.__write.print(1, 2)
         else:
-            self.__write.message = "An invalid histogram flag (\"%s\") was used for querying the %s's histogram's energy spectra." % (histFlag, self.__particleID)
+            self.__write.message = "A histogram for %s originating from %s does not exist." % (self.__particleID, histFlag)
             self.__write.print(1, 2)
 
         return theHistogram
@@ -699,22 +717,30 @@ class ParticleData:
 
     def __parseEnergySpectraData(self, data):
         """Parses out data for energy spectra"""
+        __nucleonHeaders = ("total", "cascade", "precompound", "evaporation")
+        __lightIonHeaders = ("total", "coalescence", "precompound", "evaporation")
+        __pionHeaders = ("total", "cascade")
+        __pmFlag = "+/-"
+        __particleFlag = (0, 1, 2)   # For nucleons, light ions, and pions
 
-        # Remove "MeV" from the first line:
-        header = data[0]
-        header = header[ header.find("[mev]") + len("[mev]") : ].strip()
+        # Determine what the headers are (based on particle type)
         if ( "pion" in self.__particleID ):
-            numHeaders = 1
-            headerFlags = ("total", "cascade")
+            numHeaders = len(__pionHeaders)
+            headerFlags = __pionHeaders
+            particleFlag = __particleFlag[0]
+        elif ( "neutrons" == self.__particleID or "protons" == self.__particleID ):
+            numHeaders = len(__nucleonHeaders)
+            headerFlags = __nucleonHeaders
+            particleFlag = __particleFlag[1]
         else:
-            numHeaders = 4
-            if ( "neutrons" == self.__particleID or "protons" == self.__particleID ):
-                headerFlags = ("total", "cascade", "precompound", "evaporation")
-            else:
-                headerFlags = ("total", "coalescence", "precompound", "evaporation")
+            numHeaders = len(__lightIonHeaders)
+            headerFlags = __lightIonHeaders
+            particleFlag = __particleFlag[2]
 
+        # Remove header line from the list:
         del data[0]
         dataLen = len(data)
+
         myBins = []
         numBins = 0
         numHistograms = 2 * numHeaders
@@ -733,12 +759,10 @@ class ParticleData:
             upperBin = theline[0]
             del theline[0]
             # Remove all +/- flags:
-            delIndx = []
-            for i in range(0, len(theline), 1):
-                if ( theline[i] == "+/-" ):
-                    delIndx.append( i )
-            for i in range(len(delIndx)-1, -1, -1):
-                del theline[ delIndx[i] ]
+            lineData = []
+            for datIndx in range(0, len(theline), 1):
+                if ( not theline[datIndx] == __pmFlag ):
+                    lineData.append( theline[datIndx] )
 
             # Convert all values to floats:
             try:
@@ -753,13 +777,13 @@ class ParticleData:
                 self.__write.message = "Could not convert lower bin to float: %s" % upperBin
                 self.__write.print(1, 2)
                 upperBin = 0.00
-            for i in range(0, len(theline), 1):
+            for i in range(0, len(lineData), 1):
                 try:
-                    theline[i] = float(theline[i])
+                    lineData[i] = float(lineData[i])
                 except:
-                    self.__write.message = "Could not convert lower bin to float: %s" % theline[i]
+                    self.__write.message = "Could not convert lower bin to float: %s" % lineData[i]
                     self.__write.print(1, 2)
-                    theline[i] = 0.00
+                    lineData[i] = 0.00
 
             # Set bin values:
             if ( numBins == 0 ):
@@ -777,9 +801,19 @@ class ParticleData:
             numBins += 1
 
             # Set histogram values:
-            for histIndx in range(0, numHeaders, 2):
-                myVals[histIndx].append( theline[histIndx] )
-                myErrs[histIndx].append( theline[histIndx] )
+            if ( not particleFlag == __particleFlag[0] ):
+                for histIndx in range(0, numHeaders, 1):
+                    myVals[histIndx].append( lineData[2*histIndx] )
+                    myErrs[histIndx].append( lineData[2*histIndx+1] )
+            else:
+                # For pions, total = cascade
+                # (total)
+                myVals[0].append( lineData[0] )
+                myErrs[0].append( lineData[1] )
+                # (cascade)
+                myVals[1].append( lineData[0] )
+                myErrs[1].append( lineData[1] )
+
 
         # Now set histograms (bins and values exist)
         for histIndx in range(0, numHeaders, 1):
@@ -857,7 +891,6 @@ class ParticleYields:
     of mass yields, charge yields, and really any yield that GSM can have.
     """
 
-
     def __init__(self, newPrint = Print() ):
         """Constructor"""
 
@@ -879,7 +912,9 @@ class ParticleYields:
         self.__channelYields = None
         self.__nuclideYields = None
         self.__massYields = None
+        self.__massKEDist = None
         self.__chargeYields = None
+        self.__chargeKEDist = None
 
         return
 
@@ -1025,6 +1060,8 @@ class ParticleYields:
         dxVals = []
         yVals = []
         dyVals = []
+        yKEVals = []
+        dyKEVals = []
         for lineIndx in range(0, len(data)-2, 1):
             newLine = data[lineIndx]
             newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
@@ -1050,9 +1087,12 @@ class ParticleYields:
             dxVals.append( 0.00 )
             yVals.append( lineData[1] )
             dyVals.append( lineData[2] )
+            yKEVals.append( lineData[3] )
+            dyKEVals.append( lineData[4] )
 
         # Now construct a charge yield object:
         self.__massYields = genPlotCls.Scatter(xVals, yVals, dxVals, dyVals, self.__write)
+        self.__massKEDist = genPlotCls.Scatter(xVals, yKEVals, dxVals, dyKEVals, self.__write)
 
         return
 
@@ -1068,6 +1108,8 @@ class ParticleYields:
         dxVals = []
         yVals = []
         dyVals = []
+        yKEVals = []
+        dyKEVals = []
         for lineIndx in range(0, len(data)-2, 1):
             newLine = data[lineIndx]
             newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
@@ -1093,9 +1135,12 @@ class ParticleYields:
             dxVals.append( 0.00 )
             yVals.append( lineData[1] )
             dyVals.append( lineData[2] )
+            yKEVals.append( lineData[3] )
+            dyKEVals.append( lineData[4] )
 
         # Now construct a charge yield object:
         self.__chargeYields = genPlotCls.Scatter(xVals, yVals, dxVals, dyVals, self.__write)
+        self.__chargeKEDist = genPlotCls.Scatter(xVals, yKEVals, dxVals, dyKEVals, self.__write)
 
         return
 
@@ -1147,5 +1192,21 @@ class ParticleYields:
         theObject = self.__chargeYields
         if ( theObject == None ):
             self.__write.message = "Cannot query: no charge yields were created."
+            self.__write.print(1, 2)
+        return theObject
+
+    def queryMassKEDist(self):
+        """Returns the mass KE distribution to the user"""
+        theObject = self.__massKEDist
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no mass kinetic energy yields were created."
+            self.__write.print(1, 2)
+        return theObject
+
+    def queryChargeKEDist(self):
+        """Returns the charge KE distribution yields to the user"""
+        theObject = self.__chargeKEDist
+        if ( theObject == None ):
+            self.__write.message = "Cannot query: no charge kinetic energy yields were created."
             self.__write.print(1, 2)
         return theObject

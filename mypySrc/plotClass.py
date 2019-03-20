@@ -1070,7 +1070,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         return
 
     # For adding plots:
-    def addHistogram(self, myBins, myValues, myLabel="No label given", xScale=1, yScale=1):
+    def addHistogram(self, myBins, myValues, myLabel="No label given", xScale=1, yScale=1, includeLabel = False):
         """Adds a histogram to the plot"""
         # Ensure scaling is valid (>0):
         if ( isinstance(xScale, (float, int)) ):
@@ -1151,8 +1151,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         self.updateDynamicX( plottedBins )
         self.updateDynamicY( plottedValues )
 
-        # Only use first few labels:
-        if ( self.__numPlotTypes > 0 ):
+        # Only use first few labels (allow user to specify is desired w/o automatically using):
+        if ( includeLabel ):
+            theLabel = myLabel
+        elif ( self.__numPlotTypes > 0 ):
             theLabel = None
         else:
             theLabel = myLabel
@@ -1181,11 +1183,11 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             yVals.append( plottedValues[len(plottedValues)-1] )
 
             # Now plot as a line (note: scaling has already been done)
-            self.addLine(xVals, yVals, myLabel, 1.00, 1.00)
+            self.addLine(xVals, yVals, myLabel, 1.00, 1.00, includeLabel)
 
         return
 
-    def addLine(self, xVals, yVals, myLabel="No label given", xScale=1, yScale=1):
+    def addLine(self, xVals, yVals, myLabel="No label given", xScale=1, yScale=1, includeLabel=False):
         """Adds a line to the plot"""
         # Ensure scaling is valid (>0):
         if ( isinstance(xScale, (float, int)) ):
@@ -1259,8 +1261,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         thisLineColor = self.__getLineColor()
         thisLineStyle = self.__getLineStyle()
 
-        # Remove legend label if desired:
-        if ( self.__numPlotTypes > 0 ):
+        # Only use first few labels (allow user to specify is desired w/o automatically using):
+        if ( includeLabel ):
+            theLabel = myLabel
+        elif ( self.__numPlotTypes > 0 ):
             theLabel = None
         else:
             theLabel = myLabel

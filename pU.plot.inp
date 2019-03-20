@@ -18,10 +18,11 @@ c ----------------------------------
 # plot doublediff energyint angleint
 # particle n he4
 # angle 60 90
-# plot energyspectrum
-# particle neutrons
+plot energyspectrum
+particle neg.pions neut.pions pos.pions
 # origin total cascade coalescence precompound evaporation
-yield mass charge
+origin total
+# yield mass charge kemass kecharge
 #
 c Annotation Arguments:
 c ----------------------------------
