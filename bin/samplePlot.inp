@@ -1,0 +1,53 @@
+# =====================================
+# NEW PLOT
+# =====================================
+# comment Some comment about the plot.
+#
+c Data Arguments:
+c ----------------------------------
+# data someDataFile.dat
+# sim someSimulationDataFile.out
+# simLabel As Many Labels as There Are sim Files Loaded
+#
+c Plot Type Arguments:
+c ----------------------------------
+# particle n he4
+# plot double differential
+# angle 30 60 90
+#
+c Annotation Arguments:
+c ----------------------------------
+# annotate Some Random Annotation
+# annotatePos X Y
+# otherAnnotate Some other random annotation
+# otherAnnotatePos X Y
+# otherAnnotateColor black
+#
+c Misc. Arguments:
+c ----------------------------------
+# save someSaveFileName.png
+# dpi 1200
+# show False
+# override True
+#
+c Axis Limits:
+c ----------------------------------
+# xscale linear
+# yscale log
+# xrange 0 150
+# yrange 1.0E-6 1.0E+2
+#
+c Figure Labels:
+c ----------------------------------
+# xlabel Some X-Axis Label
+# ylabel Some Y-Axis Label
+# title  Some Plot Title
+# legend (text OR "co" w/ XY usage) (X Y)
+#
+c End Arguments:
+c ----------------------------------
+# end
+# quit
+# stop
+# done
+# new
