@@ -104,7 +104,7 @@ if __name__ == "__main__":
             pool.close()
             pool.join()
     else:
-        messageControlloer = Print(5)
+        messageControlloer = Print(2)
         PlotGSMInputFile( cmdArgs[0], messageControlloer )
 
     exit()
