@@ -22,6 +22,7 @@ from multiprocessing import Pool
 # Modules:
 sys.path.insert(0, './src')   # Add personal python scripts to path:
 from gsmPlotClass import PlotGSMInputFile
+from printClass import Print
 
 # For testing ideas:
 import testingModule
@@ -72,8 +73,6 @@ if __name__ == "__main__":
     if ( testingModule.letsTest ):
         exit()
 
-
-
     # Obtain all input files given (assume all are inputs):
     cmdArgs = sys.argv
     cmdArgs.pop(0)
@@ -99,9 +98,13 @@ if __name__ == "__main__":
     print("The script is being ran using {} processor(s).".format(_numProcessors) )
 
     # Create input file class for each provided file:
-    with Pool(processes=_numProcessors) as pool:
-        pool.map(PlotGSMInputFile, cmdArgs)
-        pool.close()
-        pool.join()
+    if(_numProcessors > 1):
+        with Pool(processes=_numProcessors) as pool:
+            pool.map(PlotGSMInputFile, cmdArgs)
+            pool.close()
+            pool.join()
+    else:
+        messageControlloer = Print(5)
+        PlotGSMInputFile( cmdArgs[0], messageControlloer )
 
     exit()

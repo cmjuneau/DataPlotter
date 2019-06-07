@@ -1347,7 +1347,7 @@ class PlotGSMInputFile:
             self.__write.message = "Experimental data will read from file \"%s\"." % (self.__dataFiles[self.__numDataFiles])
             self.__write.print(2, 2)
             if ( not fileModule.fileExists( self.__dataFiles[self.__numDataFiles] ) ):
-                self.__write.message = "   File \"%s\" does not exist for reading experimental data from." % (self.__dataFiles[self.__numDataFiles])
+                self.__write.message = "   File \"%s\" does not exist for reading experimental data from." % (self.__dataFiles[self.__numDataFiles-1])
                 self.__write.print(1, 2)
             else:
                 # File exists; read data file:
@@ -1365,7 +1365,7 @@ class PlotGSMInputFile:
             self.__simFiles.append( lineFlag.strip() )
             self.__numSimFiles += 1
             if ( not fileModule.fileExists( self.__simFiles[ len(self.__simFiles)-1 ] ) ):
-                self.__write.message = "File \"%s\" does not exist for reading simulation data from." % (self.__simFiles[self.__numSimFiles])
+                self.__write.message = "File \"%s\" does not exist for reading simulation data from." % (self.__simFiles[self.__numSimFiles-1])
                 self.__write.print(1, 2)
             else:
                 self.__simObjects.append( GSMOutput(self.__simFiles[self.__numSimFiles-1], self.__write) )

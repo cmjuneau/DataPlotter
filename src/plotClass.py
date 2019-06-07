@@ -908,6 +908,7 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         self.__allowSeveralPlots = self.__defaultAllowSeveralPlots
         self.__numPlotTypes = 0       # Number of plot types created
         self.__numPlotTypeLines = 0   # Number of lines in the plot type
+        self.__numExpDataPlotted = 0   # Number of exp. data lines plotted
 
         return
 
@@ -1023,13 +1024,13 @@ class PlotClass(_PlotLabeling, _AxisLimits):
     def setLegendPos(self, loc = __defaultLegendPos, xStart = __defaultLegendX, yStart = __defaultLegendY ):
         """Sets position of legend"""
         # Default values (minimum for uniqueness)
-        __uniqueLOC = ['b', 'upper r', 'upper l', 'lower l',
-        'lower r', 'r', 'center l', 'center r', 'lower c',
-        'upper c', "ce"]
+        __uniqueLOC = ('b', 'upper-r', 'upper-l', 'lower-l',
+        'lower-r', 'r', 'center-l', 'center-r', 'lower-c',
+        'upper-c', "ce")
         # Full named values (ensures "LOC" is always valid)
-        __validLOC = ['best', 'upper right', 'upper left', 'lower left',
+        __validLOC = ('best', 'upper right', 'upper left', 'lower left',
         'lower right', 'right', 'center left', 'center right', 'lower center',
-        'upper center', 'center']
+        'upper center', 'center')
         # For using coordinate values
         __coordinateFlag = "co"
 
@@ -1041,12 +1042,15 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         for i in range(0, len(__uniqueLOC), 1):
             if ( loc.startswith(__uniqueLOC[i]) ):
                 loc = __validLOC[i]
+                xStart = None
+                yStart = None
                 validArgument = True
                 break
 
         # Set legend location:
         if ( validArgument ):
             self.__legendPos = loc
+            self.__legendPosXY = None
         elif ( loc.startswith(__coordinateFlag) ):
             # Use X/Y Position instead; ensure X/Y combo will appear in axis:
             if ( xStart <= 0.00 ):
@@ -1382,8 +1386,14 @@ class PlotClass(_PlotLabeling, _AxisLimits):
             self.__write.print(2, 2)
         for i in range(0, len(xVals), 1):
             xVals[i] = xVals[i] * xScale
+        if( not xErr == None):
+            for i in range(0, len(xErr), 1):
+                xErr[i] = xErr[i] * xScale
         for i in range(0, len(yVals), 1):
             yVals[i] = yVals[i] * yScale
+        if( not yErr == None):
+            for i in range(0, len(yErr), 1):
+                yErr[i] = yErr[i] * yScale
 
         # Update dynamic min/max limits for X and Y:
         self.updateDynamicX( xVals )
@@ -1395,6 +1405,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         else:
             theLabel = myLabel
 
+        # Only print first label for exp. data:
+        if(self.__numExpDataPlotted > 0):
+            theLabel = None
+
         # Obtain what will be the line's properties:
         if ( expData ):
             theColor = self.__expDataColor
@@ -1403,9 +1417,10 @@ class PlotClass(_PlotLabeling, _AxisLimits):
         theMarker = self.__getMarker()
 
         if ( expData ):
-            self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
-            marker=theMarker, mec=theColor, ecolor=theColor, ms=6.5, mew=1.5,
-            mfc=theColor, linewidth=0, label=theLabel)
+            self._BaseFigure__axis.errorbar(xVals, yVals, yerr=yErr, xerr=xErr,
+            marker=theMarker, mec='black', ecolor=theColor, ms=4, mew=0.25,
+            mfc=theColor, linewidth=0, elinewidth=0.5, label=theLabel)
+            self.__numExpDataPlotted += 1
         else:
             self._BaseFigure__axis.errorbar(xVals, yVals, xerr=xErr, yerr=yErr,
             marker=theMarker, mec=theColor, ecolor=theColor, elinewidth=0.5,
