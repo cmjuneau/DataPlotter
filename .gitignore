@@ -1,6 +1,12 @@
 # Compiled python modules:
 *.pyc
 
+# Files used for plot generation (and those generated):
+*.inp
+*.out
+*.dat
+*.png
+
 
 # Misc:
 *~
