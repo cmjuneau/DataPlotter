@@ -312,10 +312,10 @@ class Scatter:
             for j in range(0, __numCommentFlags, 1):
                 if ( __commentFlags[j] in theFilesData[i] ):
                     lineData = theFilesData[i]
-                    lineData = lineData[ : len(__commentFlags[j]) ]
+                    lineData = lineData[ : len(__commentFlags[j])-1 ]
                     theFilesData[i] = lineData.rstrip()
 
-            # Remote tabs:
+            # Remove tabs:
             theFilesData[i] = theFilesData[i].replace("\t", " ")
 
         # Store fileData:
@@ -324,8 +324,9 @@ class Scatter:
             # Ignore blank lines:
             if ( theFilesData[i] == "" ):
                 continue
-            # Store information:
-            fileData.append( theFilesData[i].strip().lower() )
+            else:
+                # Store information:
+                fileData.append( theFilesData[i].strip().lower() )
 
         # Obtain headers line, remove from data set, and determine how data is parsed:
         headerLine = fileData[0]
@@ -337,6 +338,8 @@ class Scatter:
                 break
         if ( theParseFlag == None ):
             newPrint.message = "Unable to determine how to parse data."
+            newPrint.print(1, 2)
+            newPrint.message = "   The detected header is as follows: {}".format(headerLine.strip())
             newPrint.print(1, 2)
             theParseFlag = input("Please enter the string by which to parse file data: ")
 
