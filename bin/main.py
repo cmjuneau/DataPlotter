@@ -17,7 +17,7 @@ import datetime
 
 
 # Modules:
-sys.path.insert(0, './mypySrc')   # Add personal python scripts to path:
+sys.path.insert(0, '../src')   # Add personal python scripts to path:
 import gsmPlotClass
 
 # For testing ideas:
