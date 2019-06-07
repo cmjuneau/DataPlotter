@@ -1,4 +1,5 @@
 # Compiled python modules:
+src/__pycache__/
 *.pyc
 
 # Files used for plot generation (and those generated):

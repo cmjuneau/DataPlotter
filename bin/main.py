@@ -13,12 +13,15 @@ This file contains the methods used to plot stuff
 ################################################################################
 # IMPORTS:
 import sys
+import os
 import datetime
+from math import floor
+from multiprocessing import Pool
 
 
 # Modules:
-sys.path.insert(0, '../src')   # Add personal python scripts to path:
-import gsmPlotClass
+sys.path.insert(0, './src')   # Add personal python scripts to path:
+from gsmPlotClass import PlotGSMInputFile
 
 # For testing ideas:
 import testingModule
@@ -50,23 +53,55 @@ def exit():
     printTime("Script done")
     sys.exit()
 
+def determineNumProcessors():
+    """Determines the number of processors to use"""
+    _maxAllowedProcessors = 20
+    numProcessors = min( floor( 0.8*(os.cpu_count()) ), _maxAllowedProcessors )
+    if ( numProcessors <= 0 ):
+        numProcessors = 1
+    return numProcessors
+
 
 ################################################################################
 # Script start:
 ################################################################################
-printTime("Start")
+if __name__ == "__main__":
+    printTime("Start")
 
-if ( testingModule.letsTest ):
-    # Put whatever interface is needed to test out the new feature(s) here:
+    # Test any new featurers here:
+    if ( testingModule.letsTest ):
+        exit()
 
+
+
+    # Obtain all input files given (assume all are inputs):
+    cmdArgs = sys.argv
+    cmdArgs.pop(0)
+    numArgs = len(cmdArgs)
+    if(numArgs <= 1):
+        eprint("")
+        eprint("--------------------------------------------")
+        eprint("This script may accept any number of input")
+        eprint("   files, requiring at least one input file.")
+        eprint("")
+        eprint("Each input file is given its own processor")
+        eprint("   to aid in image generation.")
+        eprint("")
+        eprint("--------------------------------------------")
+
+    eprint("The provided command line arguments include:")
+    for i in range(0, numArgs):
+        eprint("\t{}: {}".format(i+1, cmdArgs[i].strip()) )
+
+
+    # Now perform for each input (use multiple processors):
+    _numProcessors = min(determineNumProcessors(), numArgs)
+    print("The script is being ran using {} processor(s).".format(_numProcessors) )
+
+    # Create input file class for each provided file:
+    with Pool(processes=_numProcessors) as pool:
+        pool.map(PlotGSMInputFile, cmdArgs)
+        pool.close()
+        pool.join()
 
     exit()
-
-
-
-# Create input file class:
-inputObj = gsmPlotClass.PlotGSMInputFile("pU.plot.inp")
-
-
-################################################################################
-exit()

@@ -1065,6 +1065,8 @@ class ParticleYields:
         for lineIndx in range(0, len(data)-2, 1):
             newLine = data[lineIndx]
             newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
+            if (newLine == ""):
+                break
 
             # Parse the line and remove all "+/-" flags
             parsedLine = parseLine( newLine )
@@ -1113,6 +1115,8 @@ class ParticleYields:
         for lineIndx in range(0, len(data)-2, 1):
             newLine = data[lineIndx]
             newLine = newLine[ __lenStrStart : ].strip()   # Remove start of line
+            if (newLine == ""):
+                break
 
             # Parse the line and remove all "+/-" flags
             parsedLine = parseLine( newLine )
