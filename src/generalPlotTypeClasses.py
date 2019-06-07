@@ -290,7 +290,7 @@ class Scatter:
         """Reads X/Y points and associated error, if present, from a file"""
         __dataIdentifiers = ("x", "y", "dx", "dy", "skip")
         __numDataID = len(__dataIdentifiers)
-        __commentFlags = ("#", "!")
+        __commentFlags = ("#", "!", "//")
         __numCommentFlags = len(__commentFlags)
         __parseFlags = (",", ";", ":", " ")
         __numParseFlags = len(__parseFlags)

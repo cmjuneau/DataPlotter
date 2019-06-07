@@ -34,7 +34,7 @@ __version__ = "1.0.0"
 
 # Plot defaults:
 # Use LaTeX as text editor:
-_defaultFontSize = 11
+_defaultFontSize = 10
 __figureFont = _defaultFontSize
 plotlib.rcParams['text.usetex'] = True
 plotlib.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
@@ -112,6 +112,7 @@ class _PlotLabeling(_BaseFigure):
     # Fonts (used for each class)
     __axisFont       = _defaultFontSize
     __annotationFont = _defaultFontSize
+    __otherAnnotationFont = _defaultFontSize - 3
     __titleFont      = _defaultFontSize + 2
 
     def __init__(self, newPlotTitle = None, newXLabel = None, newYLabel = None, useBoldFont = True, newPrint = Print() ):
@@ -238,13 +239,13 @@ class _PlotLabeling(_BaseFigure):
                     thisAnnotation = self._BaseFigure__axis.annotate(theAnnotation,
                     xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
                     xycoords="data", horizontalalignment="left", verticalalignment="bottom",
-                    fontsize=self.__annotationFont, clip_on=True, color=self.__otherAnnotateColor[i],
+                    fontsize=self.__otherAnnotationFont, clip_on=True, color=self.__otherAnnotateColor[i],
                     bbox=dict(boxstyle="round", fc="1.0", ec="0.75", alpha=0.60) )
                 else:
                     thisAnnotation = self._BaseFigure__axis.annotate(theAnnotation,
                     xy=(self.__otherAnnotateX[i], self.__otherAnnotateY[i]),
                     xycoords="data", horizontalalignment="left", verticalalignment="bottom",
-                    fontsize=self.__annotationFont, clip_on=True, color=self.__otherAnnotateColor[i])
+                    fontsize=self.__otherAnnotationFont, clip_on=True, color=self.__otherAnnotateColor[i])
 
                 thisAnnotation.draggable()
 
