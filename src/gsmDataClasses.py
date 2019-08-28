@@ -56,7 +56,7 @@ __version__ = "1.0.0"
 # Module defaults:
 # (PISA Data)
 particleTypes = ("n", "p", "d", "t", "he3", "he4", "he6", "li6", "li7", "li8",
-"li9", "be7", "be9", "be10", "b9", "b10", "b11", "b12", "c11", "c12", "c13",
+"li9", "be7", "be9", "be10", "b8", "b9", "b10", "b11", "b12", "c10", "c11", "c12", "c13",
 "c14", "z=7", "z=8", "z=9", "z=10", "z=11", "z=12", "z=13", "z=14")
 numParticleTypes = len( particleTypes )
 

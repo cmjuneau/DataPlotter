@@ -31,13 +31,17 @@ particleTypes = ("n", "p", "d", "t", "he3", "he4", "he6", "li6", "li7", "li8",
 "c14", "z=7", "z=8", "z=9", "z=10", "z=11", "z=12", "z=13", "z=14")
 numParticleTypes = len( particleTypes )
 
+_defaultEGName = "Unknown"
+_egNames = ("CEM", "LAQGSM", "GSM")
+_numEGNames = len(_egNames)
+
 
 class GSMOutput:
     """GSM Output Class"""
     __pisaAngleIntFlag = 361
     __pisaEnergyIntFlag = 362
 
-    def __init__(self, fileName = None, newPrint = Print() ):
+    def __init__(self, fileName, newPrint = Print() ):
         """Constructor for the GSM Output class"""
 
         # Reset all values:
@@ -72,6 +76,7 @@ class GSMOutput:
         """Resets all members in the object"""
 
         self.__fileData = []
+        self.__egName = _defaultEGName # Event generator name
         self.__fileLen = 0
         self.__fileRead = False
         # PISA:
@@ -107,9 +112,19 @@ class GSMOutput:
         for lineIndx in range(0, self.__fileLen, 1):
             self.__fileData[lineIndx] = self.__fileData[lineIndx].lower().strip()
 
+            # If in first few lines, look for the event generator name
+            if ((lineIndx <= 35) and (self.__egName == _defaultEGName)):
+                for indx in range(0, _numEGNames):
+                    if (_egNames[indx].lower() in self.__fileData[lineIndx]):
+                        self.__egName = _egNames[indx]
+                        break
+
         self.__parseParticleData()
         self.__parseYieldData()
-        self.__parseDoubleDiff()
+        if (self.__egName is not "LAQGSM"):
+            self.__parseDoubleDiff()
+        else:
+            self.__parseDoubleDiff_LAQ()
 
         return
 
@@ -425,9 +440,133 @@ class GSMOutput:
                     theHistogram = gsmData.Histogram("energy integrated", self.__pisaEnergyIntFlag, myBins, myValues[j], self.__write)
                     self.__pisaData.addParticleHistogram(particleID[j], theHistogram)
 
-
         return
 
+    def __parseDoubleDiff_LAQ(self):
+        """
+        Parse out double differential cross section data from LAQGSM output file
+
+        Parses out data for:
+            Double differential cross sections
+            Angle  integrated distributions
+            Energy integrated distributions
+        """
+        __dataFlags = ("Spectra ( dS/dT/dO ) of produced particles at theta=".strip().lower(),
+        "Angle integrated spectra of produced particles".strip().lower(),
+        "Energy integ. ang. distrib. of prod. particles".strip().lower())
+        __dataLen = ( len(__dataFlags[0]), len(__dataFlags[1]), len(__dataFlags[2]) )
+
+        # Print message:
+        self.__write.message = "\t\tObtaining LAQGSM PISA double differential data..."
+        self.__write.print(2, 3)
+
+        # Tables are organized w/ rows as energy (in GeV) and columns as the particle name
+        for i in range(0, self.__fileLen, 1):
+
+            # Obtain the line
+            dataLine = self.__fileData[i]
+
+            # Look for a data flag
+            if ( dataLine.startswith(__dataFlags[0]) or dataLine.startswith(__dataFlags[1]) ):
+
+                # Obtain angle for the data
+                if (dataLine.startswith(__dataFlags[1])):
+                    theAngle = self.__pisaAngleIntFlag
+                else:
+                    startIndx = dataLine.find(__dataFlags[0])+len(__dataFlags[0])
+                    endIndx = dataLine.find("+/-")
+                    theAngle = float(dataLine[startIndx : endIndx].strip())
+
+                # Obtain tuple of particle names
+                i += 1
+                dataLine = dataLine = self.__fileData[i]
+                particleNames = parseLine(self.__fileData[i])
+                # Remove the energy column "T(GeV)"
+                if (not theAngle == self.__pisaAngleIntFlag):
+                    particleNames.pop(0)
+                numParticles = len(particleNames)
+                
+                # Now read through the data
+                numBins = 0
+                binWidth = 0
+                numXSVals = 0
+                energyBins = [0.00]
+                xsValues = [ [] for j in range(0, numParticles, 1) ]
+                while True:
+                    # Obtain new line of information
+                    i += 1
+                    data = parseLine (self.__fileData [ i ])
+
+                    # Exit loop if the line is empty
+                    if (len(data) == 0):
+                        break
+
+                    # Convert all values to a float
+                    for indx in range(0, len(data)):
+                        try:
+                            data[indx] = float(data[indx])
+
+                            # Convert energy values to MeV and XS values to (mb/MeV/sr) [from mb/GeV/sr]
+                            if (indx == 0):
+                                data[indx] = 1000.0 * data[indx]
+                            else:
+                                data[indx] = data[indx] / 1000.0
+
+                        except:
+                            self.__write.message = "Could not convert data ({}) to float.".format(data[indx])
+                            self.__write(1, 0)
+                            data[indx] = 0.00
+                    
+                    # Set "easy references" (note: energy is the average energy in the bin)
+                    energy = data[0]
+                    data.pop(0)   # 'data' is now the angles for the particles
+
+                    # Break out of loop for energies larger than CEM/GSM PISA data energy range
+                    if (energy > 2500):
+                        break
+
+                    # Look for a skipped bin
+                    if (energy == (1.5 * binWidth + energyBins[numBins])):
+                        # Found a skipped bin; add the bound and set all XS values to zero
+                        energyBins.append(energyBins[numBins] + binWidth)
+                        numBins += 1
+                        for j in range(0, numParticles):
+                            xsValues[j].append(0.00)
+                        numXSVals += 1
+
+                    # Estimate bin width and create an upper bound
+                    binWidth = 2 * (energy - energyBins[numBins])
+                    energyBins.append( energyBins[numBins] + binWidth )
+                    numBins += 1
+
+                    # Set value for each of the bins:
+                    for j in range(0, numParticles, 1):
+                        xsValues[j].append( data[j] )
+                    numXSVals += 1
+
+                # Reached end of data table; no more data (construct particle histograms)
+                for parIndx in range(0, numParticles):
+                    # Write to user
+                    self.__write.message = "\t\t\tStoring LAQGSM 'PISA' histogram data for particle '{}'...".format(particleNames[parIndx])
+                    self.__write.print(2, 5)
+
+                    # Create histogram object
+                    histo = gsmData.Histogram(particleNames[parIndx], theAngle, energyBins, xsValues[parIndx], self.__write)
+
+                    # Add histogram for the particle
+                    self.__pisaData.addParticleHistogram(particleNames[parIndx], histo)
+
+
+            elif ( dataLine.startswith(__dataFlags[2]) ):
+                # Read energy integrated spectra (i.e. angular distributions)
+                print("Reading angular distributions has not been established for LAQGSM output files...")
+                
+                # Break out of search loop after energy. integrated distributions found
+                break
+
+        return
+    
+    
     # For retrieving data:
     def getPISAData(self):
         """Returns the PISA object to the user"""
