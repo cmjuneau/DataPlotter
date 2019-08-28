@@ -549,7 +549,6 @@ class YieldPlots:
 
         return yieldTypes
 
-
 class PlotGSMInputFile:
     """Reads an input file and sets values based on input specification."""
     # Input arguments:
@@ -807,11 +806,9 @@ class PlotGSMInputFile:
                 self.__numDataScale += 1
 
         # Create lines:
-        for i in range(0, self.__numExpObjects, 1):
+        for expID in range(0, self.__numExpObjects, 1):
             self.__write.message = "Plotting exp. data..."
             self.__write.print(2, 2)
-
-        for expID in range(0, self.__numExpObjects, 1):
             xVals = self.__expObjects[expID].getXValues()
             yVals = self.__expObjects[expID].getYValues()
             dxVals = self.__expObjects[expID].getXError()

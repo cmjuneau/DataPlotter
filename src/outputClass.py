@@ -492,7 +492,7 @@ class GSMOutput:
                 numXSVals = 0
                 energyBins = [0.00]
                 xsValues = [ [] for j in range(0, numParticles, 1) ]
-                while True:
+                while (True):
                     # Obtain new line of information
                     i += 1
                     data = parseLine (self.__fileData [ i ])
@@ -514,7 +514,7 @@ class GSMOutput:
 
                         except:
                             self.__write.message = "Could not convert data ({}) to float.".format(data[indx])
-                            self.__write(1, 0)
+                            self.__write.print(1, 0)
                             data[indx] = 0.00
                     
                     # Set "easy references" (note: energy is the average energy in the bin)
@@ -546,11 +546,10 @@ class GSMOutput:
                                 xsValues[j].append(0.00)
                             numXSVals += 1
                         else:
+                            # Estimate bin width and create an upper bound
+                            energyBins.append( energyBins[numBins] + binWidth )
+                            numBins += 1
                             break
-
-                    # Estimate bin width and create an upper bound
-                    energyBins.append( energyBins[numBins] + binWidth )
-                    numBins += 1
 
                     # Set value for each of the bins:
                     for j in range(0, numParticles, 1):
@@ -569,11 +568,76 @@ class GSMOutput:
                     # Add histogram for the particle
                     self.__pisaData.addParticleHistogram(particleNames[parIndx], histo)
 
-
             elif ( dataLine.startswith(__dataFlags[2]) ):
                 # Read energy integrated spectra (i.e. angular distributions)
-                print("Reading angular distributions has not been established for LAQGSM output files...")
+                # Obtain tuple of particle names
+                i += 1
+                dataLine = self.__fileData[i]
+                particleNames = parseLine(self.__fileData[i])
+                particleNames.pop(0)   # Remove the "theta" label
+                numParticles = len(particleNames)
                 
+                # Now read through the data
+                numBins = 0
+                binWidth = 10
+                numXSVals = 0
+                angleBins = [0.00]
+                xsValues = [ [] for j in range(0, numParticles, 1) ]
+                while (True):
+                    # Obtain the next line
+                    i += 1
+                    data = parseLine (self.__fileData[i])
+                    if (len(data) == 0):
+                        break
+
+                    # Convert all values to a float
+                    for indx in range(0, len(data)):
+                        try:
+                            data[indx] = float(data[indx])
+                        except:
+                            self.__write.message = "Could not convert data ({}) to float.".format(data[indx])
+                            self.__write.print(1, 0)
+                            data[indx] = 0.00
+                    
+                    # Set "easy references" (note: energy is the average energy in the bin)
+                    angleMidPoint = data[0]
+                    data.pop(0)   # 'data' is now the XS values for the particles [mb/sr]
+
+                    # Fill all empty bins and generate the next anticipated bin energy
+                    while (True):
+
+                        # Fill in empty bins
+                        anticipatedAngle = angleBins[numBins] + binWidth
+                        if (angleMidPoint > anticipatedAngle):
+                            # Bins were skipped; fill angles appropriately and set XS values to zero
+                            angleBins.append(anticipatedAngle)
+                            numBins += 1
+                            for j in range(0, numParticles):
+                                xsValues[j].append(0.00)
+                            numXSVals += 1
+                        else:
+                            # Estimate bin width and create an upper bound
+                            angleBins.append( anticipatedAngle )
+                            numBins += 1
+                            break
+
+                    # Set value for each of the bins:
+                    for j in range(0, numParticles, 1):
+                        xsValues[j].append( data[j] )
+                    numXSVals += 1
+
+                # Reached end of data table; no more data (construct particle histograms)
+                for parIndx in range(0, numParticles):
+                    # Write to user
+                    self.__write.message = "\t\t\tStoring LAQGSM energy integrated histogram data for particle '{}'...".format(particleNames[parIndx])
+                    self.__write.print(2, 5)
+
+                    # Create histogram object
+                    histo = gsmData.Histogram("energy integrated", self.__pisaEnergyIntFlag, angleBins, xsValues[parIndx], self.__write)
+
+                    # Add histogram for the particle
+                    self.__pisaData.addParticleHistogram(particleNames[parIndx], histo)
+
                 # Break out of search loop after energy. integrated distributions found
                 break
 

@@ -456,7 +456,7 @@ class DoubleDiffPISA:
             if ( foundParticle ):
                 return self.__particleData[ particleIndx ]
             else:
-                self.__write.message = "Particle \"%s\" has no data."
+                self.__write.message = "Particle \"%s\" has no data." % (particleID)
                 self.__write.print(1, 1)
                 return None
 
