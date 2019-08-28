@@ -525,17 +525,30 @@ class GSMOutput:
                     if (energy > 2500):
                         break
 
-                    # Look for a skipped bin
-                    if (energy == (1.5 * binWidth + energyBins[numBins])):
-                        # Found a skipped bin; add the bound and set all XS values to zero
-                        energyBins.append(energyBins[numBins] + binWidth)
-                        numBins += 1
-                        for j in range(0, numParticles):
-                            xsValues[j].append(0.00)
-                        numXSVals += 1
+                    # Fill all empty bins and generate the next anticipated bin energy
+                    while (True):
+
+                        # Set bin width
+                        if (energy < 20):
+                            binWidth = 2
+                        elif (energy < 100):
+                            binWidth = 5
+                        else:
+                            binWidth = 10
+
+                        # Fill in empty bins
+                        anticipatedEnergy = energyBins[numBins] + binWidth
+                        if (energy > anticipatedEnergy):
+                            # Bins were skipped; fill energy appropriately and set XS values to zero
+                            energyBins.append(anticipatedEnergy)
+                            numBins += 1
+                            for j in range(0, numParticles):
+                                xsValues[j].append(0.00)
+                            numXSVals += 1
+                        else:
+                            break
 
                     # Estimate bin width and create an upper bound
-                    binWidth = 2 * (energy - energyBins[numBins])
                     energyBins.append( energyBins[numBins] + binWidth )
                     numBins += 1
 
